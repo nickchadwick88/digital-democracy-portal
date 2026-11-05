@@ -8,6 +8,7 @@ import PaymentPortal from "./pages/PaymentPortal";
 import ProposalDetail from "./pages/ProposalDetail";
 import AccessCenters from "./pages/AccessCenters";
 
+import LawLibrary from "./pages/LawLibrary";
 import VoteHistory from "./pages/VoteHistory";
 import ParticipationProvider from "./components/ParticipationProvider";
 import "./App.css";
@@ -22,6 +23,7 @@ function App() {
         <Route path="/voting" element={<VotingPortal />} />
         <Route path="/payment" element={<PaymentPortal />} />
         <Route path="/proposal/:id" element={<ProposalDetail />} />
+        <Route path="/laws" element={<LawLibrary />} />
         <Route path="/history" element={<VoteHistory />} />
         <Route path="*" element={<VotingPortal />} />
         <Route path="/access" element={<AccessCenters />} />

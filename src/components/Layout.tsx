@@ -13,6 +13,7 @@ export default function Layout({ title, subtitle, children }: LayoutProps) {
   const navItems = [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/voting", label: "Voting" },
+    { to: "/laws", label: "Law Library" },
     { to: "/payment", label: "Your Income Portal" },
     { to: "/history", label: "Your vote history" },
     { to: "/access", label: "Access" },
