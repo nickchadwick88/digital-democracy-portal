@@ -1,0 +1,33 @@
+name: Law workspace browser review
+on:
+  push:
+    branches: [feat/recover-voting-prototype]
+    paths: ['tests/law-browser.mjs', '.github/workflows/law-browser.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: official-law-corpus-119-136
+          path: law-corpus
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 42063808408
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false @playwright/test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: node tests/law-browser.mjs

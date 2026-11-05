@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { chromium } from '@playwright/test';
+const server = spawn('python3', ['scripts/serve_laws.py', '--db', 'law-corpus/laws.sqlite', '--dist', 'dist', '--port', '8765'], { stdio: 'inherit' });
+let browser;
+try {
+  for (let i = 0; i < 60; i++) {
+    try { const r = await fetch('http://127.0.0.1:8765/api/laws/stats'); if (r.ok) break; } catch {}
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('http://127.0.0.1:8765/law-explorer');
+  await page.getByRole('button', { name: 'Connect to corpus', exact: true }).click();
+  await page.getByText('60,463', { exact: false }).first().waitFor();
+  await page.locator('.law-map path[role=button]').first().waitFor();
+  assert.ok(await page.locator('.law-map path[role=button]').count() >= 48);
+  assert.equal(await page.getByRole('button', { name: 'Research with AI', exact: true }).isDisabled(), true);
+  await page.getByLabel('Words or citation', { exact: true }).fill('corporations');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.locator('.law-results article').first().waitFor();
+  const first = page.locator('.law-results article').first();
+  await first.getByRole('button', { name: 'Compare as A', exact: true }).click();
+  await first.getByRole('button', { name: 'Compare as B', exact: true }).click();
+  await page.getByRole('button', { name: 'Compare wording', exact: true }).click();
+  await page.getByText('No textual differences.', { exact: true }).waitFor();
+  await first.getByRole('button', { name: 'Read source', exact: true }).click();
+  await page.getByText('Propose a transcription correction', { exact: true }).waitFor();
+  const id = await page.locator('#compare-a').inputValue();
+  const before = await (await fetch('http://127.0.0.1:8765/api/laws/source?id=' + encodeURIComponent(id))).json();
+  await page.getByText('Propose a transcription correction', { exact: true }).click();
+  await page.getByLabel('Proposed corrected transcription', { exact: true }).fill(before.body + '\nCI TEST DRAFT ONLY: not a real source correction.');
+  await page.getByLabel('Evidence and reason', { exact: true }).fill('Automated isolated review test. Do not apply to source law.');
+  await page.getByRole('button', { name: 'Submit correction draft', exact: true }).click();
+  await page.getByText('Correction submitted for review. The original source is preserved.', { exact: true }).waitFor();
+  const after = await (await fetch('http://127.0.0.1:8765/api/laws/source?id=' + encodeURIComponent(id))).json();
+  assert.equal(after.body, before.body); assert.equal(after.text_hash, before.text_hash);
+  await page.getByRole('button', { name: 'Find shared text', exact: true }).click();
+  await page.getByText(/source references share this text/).first().waitFor();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('http://127.0.0.1:8765/law-explorer');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Mobile content overflows horizontally');
+  assert.deepEqual(errors, []);
+  console.log('Law browser review passed: real corpus, map, search, source, comparison, consolidation, correction preservation, AI offline status, mobile layout.');
+} finally {
+  await browser?.close();
+  server.kill('SIGTERM');
+}
