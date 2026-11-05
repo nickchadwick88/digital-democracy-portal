@@ -19,3 +19,12 @@ test('invalid saved data cannot silently replace a participant record', () => {
   assert.throws(() => parseParticipation('{"votes":[{"id":"x","choice":"Support"}],"suggestions":[]}'));
   assert.throws(() => parseParticipation('{"votes":[],"suggestions":[{"text":5}]}'));
 });
+
+test('legacy browser records migrate without losing votes', () => {
+  const original = addVote(emptyParticipation(), 'P-2041', 1, 'Support');
+  const legacy = JSON.stringify({ votes: original.votes, suggestions: [] });
+  const restored = parseParticipation(legacy);
+  assert.deepEqual(restored.votes, original.votes);
+  assert.deepEqual(restored.proposals, []);
+  assert.deepEqual(restored.revisions, []);
+});

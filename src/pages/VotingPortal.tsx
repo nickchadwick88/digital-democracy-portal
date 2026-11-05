@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
-import { proposals } from "../data/proposals";
+import { allProposals } from "../data/proposalModel";
 import { useParticipation } from "../components/ParticipationContext";
 import { latestVote } from "../data/participation";
 export default function VotingPortal() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const { state, error } = useParticipation();
+  const proposals = allProposals(state);
   const term = query.trim().toLowerCase();
   const visible = proposals.filter(p => (category === "All" || p.category === category) && `${p.id} ${p.title} ${p.summary}`.toLowerCase().includes(term));
   return <Layout title="Public decisions" subtitle="Read the wording. Consider the tradeoffs. Make your voice count.">
     {error && <p role="alert" className="error-message">{error}</p>}
+    <div className="portal-actions"><Link className="primary-link" to="/proposal/new">Create a proposal</Link></div>
+    {state.drafts.length > 0 && <section className="section-card"><h2>Your saved drafts</h2><ul>{state.drafts.map(d => <li key={d.id}><Link className="action-link" to={`/draft/${d.id}`}>{d.title.trim() || 'Untitled draft'}</Link></li>)}</ul></section>}
     <div className="filters">
       <label>Search proposals<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by topic or proposal ID" /></label>
       <label>Category<select value={category} onChange={e => setCategory(e.target.value)}>{["All", ...new Set(proposals.map(p => p.category))].map(c => <option key={c}>{c}</option>)}</select></label>

@@ -8,7 +8,11 @@ import PaymentPortal from "./pages/PaymentPortal";
 import ProposalDetail from "./pages/ProposalDetail";
 import AccessCenters from "./pages/AccessCenters";
 
+import LawExplorer from "./pages/LawExplorer";
 import LawLibrary from "./pages/LawLibrary";
+import NewProposal from "./pages/NewProposal";
+import Settings from "./pages/Settings";
+import About from "./pages/About";
 import VoteHistory from "./pages/VoteHistory";
 import ParticipationProvider from "./components/ParticipationProvider";
 import "./App.css";
@@ -23,7 +27,11 @@ function App() {
         <Route path="/voting" element={<VotingPortal />} />
         <Route path="/payment" element={<PaymentPortal />} />
         <Route path="/proposal/:id" element={<ProposalDetail />} />
+        <Route path="/new-proposal" element={<NewProposal />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/law-explorer" element={<LawExplorer />} />
         <Route path="/laws" element={<LawLibrary />} />
+        <Route path="/about" element={<About />} />
         <Route path="/history" element={<VoteHistory />} />
         <Route path="*" element={<VotingPortal />} />
         <Route path="/access" element={<AccessCenters />} />

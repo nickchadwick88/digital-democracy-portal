@@ -421,3 +421,35 @@ blockquote p { white-space: pre-wrap; }
   .lp-portal-card { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+
+.portal-actions { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+.proposal-form { max-width: 850px; }
+.proposal-form label { margin-top: 24px; }
+.proposal-form label:first-child { margin-top: 0; }
+.proposal-form #new-wording { min-height: 240px; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.secondary-button { background: white; color: #245b99; }
+.secondary-button:hover { background: #eaf1f9; }
+.wording { white-space: pre-wrap; overflow-wrap: anywhere; }
+.version-notice { padding: 18px; border-left: 4px solid #956014; background: #fff5df; margin-bottom: 28px; }
+.revision-history { margin-top: 40px; }
+.revision-editor { margin-top: 24px; max-width: 850px; }
+.wording-comparison { margin-top: 20px; border-top: 1px solid #d4deea; padding-top: 12px; }
+.previous-wording { padding: 12px; background: #fff0ed; }
+.new-wording { padding: 12px; background: #edf7ee; }
+
+.portal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 24px; }
+.proposal-form { max-width: 850px; }
+.proposal-form label { margin-top: 24px; }
+.proposal-form label:first-child { margin-top: 0; }
+.proposal-form #new-wording { min-height: 240px; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.secondary-button { background: white; color: #245b99; }
+.secondary-button:hover { background: #eaf1f9; }
+.wording { white-space: pre-wrap; overflow-wrap: anywhere; }
+.version-notice { padding: 18px; border-left: 4px solid #956014; background: #fff5df; margin-bottom: 28px; }
+.revision-history { margin-top: 40px; }
+.revision-editor { margin-top: 24px; max-width: 850px; }
+.wording-comparison { margin-top: 20px; border-top: 1px solid #d4deea; padding-top: 12px; }
+.previous-wording { padding: 12px; background: #fff0ed; }
+.new-wording { padding: 12px; background: #edf7ee; }
