@@ -54,6 +54,16 @@ class RepositoryTest(unittest.TestCase):
         count=stats(self.db)["source_records"]
         ingest_archive(self.db,raw,"fixture.zip","https://example.org/fixture.zip",release="fixture")
         self.assertEqual(stats(self.db)["source_records"],count)
+    def test_duplicate_statute_numbers_keep_separate_source_occurrences(self):
+        xml=b'''<uscDoc xmlns="http://xml.house.gov/schemas/uslm/1.0"><main><title><num value="5"/><section id="first" identifier="/us/usc/t5/s3598"><num value="3598"/><heading>Duplicate number A</heading><content><p>First separately enacted text.</p></content><notes><section identifier="/us/usc/t5/s999"><content><p>Quoted note, not another codified section.</p></content></section></notes></section><section id="second" identifier="/us/usc/t5/s3598"><num value="3598"/><heading>Duplicate number B</heading><content><p>Second separately enacted text.</p></content></section></title></main></uscDoc>'''
+        buff=io.BytesIO()
+        with zipfile.ZipFile(buff,"w") as z:z.writestr("usc05.xml",xml)
+        ingest_archive(self.db,buff.getvalue(),"duplicate.zip","https://example.org/duplicate.zip",release="fixture")
+        a=get_source(self.db,"uscode:fixture:/us/usc/t5/s3598#first")
+        b=get_source(self.db,"uscode:fixture:/us/usc/t5/s3598#second")
+        self.assertNotEqual(a["text_hash"],b["text_hash"])
+        self.assertEqual(a["citation"],b["citation"])
+        with self.assertRaises(ValueError):get_source(self.db,"uscode:fixture:/us/usc/t5/s999")
     def test_agent_uses_tools_and_saves_trace_without_source_writes(self):
         replies=iter([
           {"role":"assistant","content":"","tool_calls":[{"function":{"name":"search","arguments":{"query":"safe exit"}}}]},

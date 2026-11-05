@@ -31,7 +31,11 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 q=parse_qs(parsed.query);get=lambda key: q.get(key,[""])[0]
                 with connect(self.database) as db:
-                    if parsed.path=="/api/laws/stats":
+                    if parsed.path=="/api/laws/boundaries":
+                        boundary=self.database.parent/"us-states.json"
+                        if not boundary.is_file(): return self.respond(404,{"error":"Geographic boundaries have not been collected yet."})
+                        result=json.loads(boundary.read_text())
+                    elif parsed.path=="/api/laws/stats":
                         result=dict(stats(db),agent_configured=bool(os.environ.get("LAW_AGENT_MODEL")))
                     elif parsed.path=="/api/laws/search": result=search(db,get("q"),jurisdiction=get("jurisdiction") or None)
                     elif parsed.path=="/api/laws/source": result=get_source(db,get("id"))

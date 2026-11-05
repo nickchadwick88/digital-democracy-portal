@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import './LawExplorer.css';
+import LawCoverageMap from '../components/LawCoverageMap';
+import type { LawBoundaries } from '../components/LawCoverageMap';
 
 type Source = { id: string; citation: string; heading: string; jurisdiction: string; release: string; source_url: string; text_hash: string; body?: string; excerpt?: string; notes?: string; credit?: string };
 type Stats = { source_records: number; unique_nonempty_texts: number; nonempty_records: number; pending_corrections: number; coverage_note: string; transcription_status: string; agent_configured: boolean; titles: { title_number: string; count: number }[]; jurisdictions: { jurisdiction: string; count: number }[] };
@@ -16,6 +18,7 @@ async function api<T>(path: string, data?: unknown): Promise<T> {
   return result as T;
 }
 export default function LawExplorer() {
+  const [boundaries, setBoundaries] = useState<LawBoundaries | null>(null);
   const [stats, setStats] = useState<Stats | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [query, setQuery] = useState(''), [results, setResults] = useState<Source[]>([]), [searched, setSearched] = useState(false);
   const [source, setSource] = useState<Source | null>(null), [groups, setGroups] = useState<Group[]>([]);
@@ -33,7 +36,7 @@ export default function LawExplorer() {
   return <Layout title="Law research workspace" subtitle="Official-source text, a separate consolidated index, and traceable comparisons.">
     <section className="section-card">
       <h2>Collected statutes</h2><p>Search the collected corpus here. The separate <a href="/laws">personal law intake</a> accepts pasted text and text files.</p>
-      <button disabled={busy} onClick={() => task(async () => setStats(await api<Stats>('stats')))}>Connect to corpus</button>
+      <button disabled={busy} onClick={() => task(async () => { setStats(await api<Stats>('stats')); setBoundaries(await api<LawBoundaries>('boundaries')); })}>Connect to corpus</button>
       <p className="muted">This workspace requires the local corpus server. A hosted static preview does not contain the full database.</p>
       {stats && <><div className="corpus-stats"><strong>{stats.source_records.toLocaleString()}<small>source records</small></strong><strong>{stats.unique_nonempty_texts.toLocaleString()}<small>unique nonempty texts</small></strong><strong>{stats.pending_corrections}<small>pending corrections</small></strong></div>
         <p>{stats.coverage_note}</p><p className="muted">{stats.transcription_status} Release points are not individual effective dates.</p></>}
@@ -63,9 +66,9 @@ export default function LawExplorer() {
       {groups.map(group => <details key={group.hash}><summary>{group.occurrences} source references share this text</summary><p>{group.excerpt}…</p>{group.references.map(ref => <p key={ref.id}><button disabled={busy} onClick={() => task(() => open(ref.id))}>{ref.citation} · {ref.jurisdiction} · {ref.release}</button></p>)}</details>)}
     </section>
     <section className="section-card"><h2>Coverage and graphics</h2><p>Federal records: {stats?.jurisdictions.find(j => j.jurisdiction === 'US-FEDERAL')?.count.toLocaleString() || 'not connected'}. State and local collections have not been imported by this collector.</p>
-      <h3>State coverage index</h3><p className="muted">Alphabetical tiles, not geographic boundaries. Gray means not collected. It does not mean a state has no laws.</p><div className="state-tiles">{states.map(state => <button key={state} aria-pressed={selectedState === state} onClick={() => setSelectedState(state)}>{state}</button>)}</div><p>{selectedState}: state-law coverage not collected. Federal-law records are tracked separately.</p>
+      <h3>Geographic coverage map</h3>{boundaries ? <LawCoverageMap data={boundaries} selected={selectedState} select={setSelectedState} /> : <p className="muted">Connect to a corpus containing the Census boundary file to display the geographic map.</p>}<h3>State coverage index</h3><p className="muted">Alphabetical tiles, not geographic boundaries. Gray means not collected. It does not mean a state has no laws.</p><div className="state-tiles">{states.map(state => <button key={state} aria-pressed={selectedState === state} onClick={() => setSelectedState(state)}>{state}</button>)}</div><p>{selectedState}: state-law coverage not collected. Federal-law records are tracked separately.</p>
       {stats && <><h3>Imported source records by U.S. Code title</h3><div className="title-bars">{stats.titles.map(title => <div key={title.title_number}><span>Title {title.title_number}</span><meter min={0} max={max} value={title.count} aria-label={'Title ' + title.title_number + ' source records'} /><strong>{title.count.toLocaleString()}</strong></div>)}</div></>}
-      <p className="muted">Geographic boundary maps and jurisdiction-by-jurisdiction difference graphs remain planned. They will use collected applicability data rather than infer it from text matches.</p>
+      <p className="muted">The map shows collection coverage. Jurisdiction-by-jurisdiction differences will appear after adoption and applicability records are collected; text matches alone do not establish them.</p>
     </section>
     <section className="section-card"><h2>AI research assistant</h2><p>{stats?.agent_configured ? 'A local model is configured. Answers are research drafts with tool traces.' : 'AI is not connected. Configure a local Ollama model with tool support to use this assistant.'}</p><p>The assistant can search, open sources, compare wording, and inspect consolidation and coverage. It cannot rewrite source laws or enact changes.</p>
       <form onSubmit={e => { e.preventDefault(); task(async () => setAgent(await api<Agent>('agent', { prompt }))); }}><label htmlFor="law-ai">Research question</label><textarea id="law-ai" value={prompt} maxLength={4000} onChange={e => setPrompt(e.target.value)} required /><button disabled={busy || !stats?.agent_configured}>Research with AI</button></form>

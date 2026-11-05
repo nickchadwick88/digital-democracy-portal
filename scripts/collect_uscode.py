@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Resume by official title archive. Pin the release; retain original XML and notes."""
 import argparse
+from collections import Counter
 import gzip
 import hashlib
 import io
@@ -46,17 +47,31 @@ def ingest_archive(db, raw, archive_name, url, release=RELEASE):
                 if main is None: continue
                 title=main.find(".//u:title/u:num",NS)
                 title_number=title.get("value",archive_name) if title is not None else archive_name
-                for section in main.findall(".//u:section",NS):
+                parents={child:parent for parent in main.iter() for child in parent}
+                def structural(section):
+                    parent=parents.get(section)
+                    while parent is not None and parent is not main:
+                        if local(parent) in {"section","notes","sourceCredit","quotedContent"}: return False
+                        parent=parents.get(parent)
+                    return True
+                sections=[s for s in main.findall(".//u:section",NS) if s.get("identifier") and structural(s)]
+                occurrences=Counter(s.get("identifier") for s in sections)
+                ordinal=Counter()
+                for section in sections:
                     identifier=section.get("identifier")
                     if not identifier: continue
                     num=section.find("u:num",NS)
                     number=num.get("value",text(num)) if num is not None else identifier.rsplit("/",1)[-1]
-                    record={"id":"uscode:"+release+":"+identifier,"jurisdiction":"US-FEDERAL",
+                    ordinal[identifier]+=1
+                    suffix=("#"+section.get("id","occurrence-"+str(ordinal[identifier]))) if occurrences[identifier]>1 else ""
+                    status=section.get("status","Unspecified in source attribute")
+                    if suffix: status+="; multiple source occurrences share this section identifier; inspect original XML"
+                    record={"id":"uscode:"+release+":"+identifier+suffix,"jurisdiction":"US-FEDERAL",
                       "citation":title_number+" U.S.C. § "+number,"heading":text(section.find("u:heading",NS)),
                       "title_number":title_number,"identifier":identifier,"release":release,
                       "source_url":url,
                       "archive_hash":archive_hash,"member":member,
-                      "source_status":section.get("status","Unspecified in source attribute"),
+                      "source_status":status,
                       "notes":"\n\n".join(text(n) for n in section.findall("u:notes",NS)),
                       "credit":text(section.find("u:sourceCredit",NS)),"imported_at":now()}
                     add_source(db,record,extract_body(section));count+=1

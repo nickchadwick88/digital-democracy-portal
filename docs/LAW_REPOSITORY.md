@@ -8,6 +8,7 @@ Python 3.11+ standard library and the portal's documented Node version are suffi
 
     python3 scripts/collect_uscode.py --output ../law-corpus --titles 1 2 3 4 5
     python3 scripts/collect_uscode.py --output ../law-corpus --titles 6 7 8 9 10 --export
+    python3 scripts/collect_boundaries.py --output ../law-corpus/us-states.json
     npm ci
     npm run build
     python3 scripts/serve_laws.py --db ../law-corpus/laws.sqlite --dist dist
@@ -62,7 +63,7 @@ For adopted building codes, sharing requires the exact adopted edition plus each
 
 ## Visual scope
 
-The explorer shows actual counts by U.S. Code title, exact-text duplicate occurrences and textual differences. The initial state coverage tiles are explicitly alphabetical, not geographic boundaries. Geographic boundary maps and applicability/difference networks require authoritative boundary data and jurisdictional adoption records. Missing data is always displayed as not collected.
+The explorer shows actual counts by U.S. Code title, exact-text duplicate occurrences and textual differences. The geographic map uses simplified Census state boundaries with Alaska/Hawaii insets. Gray means state law has not been collected; federal records are tracked separately. State tiles provide an alphabetical keyboard-friendly alternative. Applicability/difference networks require jurisdictional adoption records. Missing data is always displayed as not collected.
 
 ## Validation
 
@@ -72,3 +73,5 @@ The explorer shows actual counts by U.S. Code title, exact-text duplicate occurr
     python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The machine corpus is not individually proofread or legally certified. This review edition needs production storage/authentication, independent source verification and broader jurisdiction coverage before public reliance.
+
+Duplicate section numbers in an official edition retain separate source occurrences using the XML element ID. Nested quotations inside notes are retained with the parent notes and are not misclassified as independent codified sections. No occurrence is silently overwritten.
