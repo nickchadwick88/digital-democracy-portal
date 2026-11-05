@@ -49,6 +49,10 @@ export default function LawWorkflow({ source }: { source: Source }) {
     setActive(draft); setTitle(draft.title); setReplacement(draft.replacement); setReason(draft.reason);
     setRange({ start: draft.start_offset, end: draft.end_offset, text: draft.original_excerpt });
   }
+  function captureSelection(element: HTMLTextAreaElement) {
+    const start = element.selectionStart, end = element.selectionEnd;
+    if (end > start) setSelection({ start: Array.from(original.slice(0, start)).length, end: Array.from(original.slice(0, end)).length, text: original.slice(start, end) });
+  }
   function reset() {
     setActive(null); setRange({ start: 0, end: Array.from(original).length, text: original });
     setTitle('Amend ' + source.citation); setReplacement(original); setReason(''); setSelection(null);
@@ -78,10 +82,7 @@ export default function LawWorkflow({ source }: { source: Source }) {
       <details><summary>Transcription review audit trail ({transcript.history.length})</summary>{transcript.history.map(review => <p key={review.id}>{review.at} · {review.decision} · {review.reviewer} · {review.reason}</p>)}</details></>}
     <h3>Correction queue</h3>{items.map(item => <CorrectionReview key={item.id + item.review_head + item.status} item={item} run={run} reload={reload} busy={busy} />)}
     <h3>Draft a legal amendment</h3><p>Select wording from the original extraction, then enter its proposed replacement. An empty replacement requests deletion. Saved versions preserve the original source hash and selection.</p>
-    {!active && <><label htmlFor="amendment-original">Original statutory body — select the words to amend</label><textarea id="amendment-original" readOnly rows={8} value={original} onSelect={event => {
-      const element = event.currentTarget, start = element.selectionStart, end = element.selectionEnd;
-      if (end > start) setSelection({ start: Array.from(original.slice(0, start)).length, end: Array.from(original.slice(0, end)).length, text: original.slice(start, end) });
-    }} /><button disabled={!selection || busy} onClick={() => { if (selection) { setRange(selection); setReplacement(selection.text); } }}>Use selected wording</button></>}
+    {!active && <><label htmlFor="amendment-original">Original statutory body — select the words to amend</label><textarea id="amendment-original" readOnly rows={8} value={original} onSelect={event => captureSelection(event.currentTarget)} onMouseUp={event => captureSelection(event.currentTarget)} onKeyUp={event => captureSelection(event.currentTarget)} /><button disabled={!selection || busy} onClick={() => { if (selection) { setRange(selection); setReplacement(selection.text); } }}>Use selected wording</button></>}
     <p>Target: characters {range.start}–{range.end} of the pinned source extraction.</p><details><summary>Original target wording</summary><pre className="statute-text">{range.text}</pre></details>
     <form onSubmit={e => { e.preventDefault(); run(save); }}>
       <label htmlFor="amendment-title">Amendment title</label><input id="amendment-title" value={title} minLength={5} maxLength={160} onChange={e => setTitle(e.target.value)} required />
@@ -93,7 +94,7 @@ export default function LawWorkflow({ source }: { source: Source }) {
       <button disabled={busy || replacement !== active.replacement || title !== active.title || reason !== active.reason} onClick={sendToDemo}>Copy saved version to demo proposal review</button>
       <p className="muted">This creates a browser-local proposal with a pinned source reference. It does not submit to a government or carry votes forward from another version. Save edits before copying.</p>
       <div className="law-actions">{active.versions.map(version => <button key={version.version} disabled={busy} onClick={() => run(async () => edit(await request<Amendment>('amendment?id=' + encodeURIComponent(active.id) + '&version=' + version.version)))}>Open draft version {version.version}</button>)}</div></>}
-    {drafts.length > 0 && <details><summary>Saved amendment drafts ({drafts.length})</summary>{drafts.map(draft => <p key={draft.id}><button onClick={() => edit(draft)}>{draft.title} · version {draft.version}</button></p>)}</details>}
+    {drafts.length > 0 && <details><summary>Saved amendment drafts ({drafts.length})</summary>{drafts.map(draft => <p key={draft.id}><button onClick={() => edit(draft)}>{draft.title} · {draft.id.slice(0, 8)} · version {draft.version}</button></p>)}</details>}
     {error && <p role="alert" className="error-message">{error}</p>}{participation.error && <p role="alert" className="error-message">{participation.error}</p>}<p role="status">{message}</p>
   </section>;
 }

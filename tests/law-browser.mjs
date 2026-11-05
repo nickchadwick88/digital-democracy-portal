@@ -57,7 +57,8 @@ try {
   await page.getByRole('button', { name: 'Start another amendment', exact: true }).click();
   const sourceBox = page.getByLabel('Original statutory body — select the words to amend', { exact: true });
   await sourceBox.focus();
-  await sourceBox.evaluate(element => { element.setSelectionRange(0, Math.min(80, element.value.length)); element.dispatchEvent(new Event('select', { bubbles: true })); });
+  await sourceBox.press('Control+Home');
+  await sourceBox.press('Control+Shift+ArrowRight');
   await page.getByRole('button', { name: 'Use selected wording', exact: true }).click();
   await page.getByLabel('Amendment title', { exact: true }).fill('CI source-linked demo amendment');
   await page.getByLabel('Proposed replacement wording', { exact: true }).fill('A short isolated test replacement.');
