@@ -1,5 +1,7 @@
+import type { LawAnchor } from './lawAnchor';
 export type Proposal = {
   id: string;
+  sourceLaw?: LawAnchor;
   title: string;
   category: string;
   stage: string;

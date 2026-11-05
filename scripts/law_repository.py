@@ -37,6 +37,8 @@ def connect(path):
     CREATE TABLE IF NOT EXISTS agent_runs(
       id TEXT PRIMARY KEY,prompt TEXT NOT NULL,response TEXT NOT NULL,trace TEXT NOT NULL,at TEXT NOT NULL);
     """)
+    from law_workflow import SCHEMA
+    db.executescript(SCHEMA)
     return db
 
 def add_source(db, source, body):

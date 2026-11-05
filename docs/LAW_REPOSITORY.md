@@ -75,3 +75,17 @@ The explorer shows actual counts by U.S. Code title, exact-text duplicate occurr
 The machine corpus is not individually proofread or legally certified. This review edition needs production storage/authentication, independent source verification and broader jurisdiction coverage before public reliance.
 
 Duplicate section numbers in an official edition retain separate source occurrences using the XML element ID. Nested quotations inside notes are retained with the parent notes and are not misclassified as independent codified sections. No occurrence is silently overwritten.
+
+
+## Correction review and amendment drafting
+
+A source's review workspace lists pending/accepted/rejected corrections. A local reviewer supplies a label, evidence/reason and confirmation of checking the original. Accepted text is a separate transcription overlay. Original bodies, hashes and search remain unchanged. Later acceptance explicitly supersedes the previous overlay; stale review tokens and repeat decisions are rejected. This is self-reported single-user review, not authenticated legal certification.
+
+Amendments pin the source ID, original hash and Unicode-code-point selection offsets. Empty replacement text means deletion. Every draft revision is retained; stale edits cannot overwrite newer versions. A saved draft version can be copied to browser-local proposal review with provenance preserved through backups. Proposal revisions remain distinct from backend amendment revisions. No endpoint enacts a law or edits the official source.
+
+Run automated source checks with:
+    python3 scripts/audit_source_text.py --corpus ../law-corpus
+
+This independent audit compares whitespace-insensitive body text against retained XML and flags mismatches. It does not establish legal force, effective dates, table layout or legal meaning. No human verification is inferred. The report is displayed when source-audit.json is beside laws.sqlite.
+
+Backend correction reviews and amendment histories are in laws.sqlite; browser proposal copies and votes are in browser backups. Back up both. Existing downloaded snapshots do not automatically contain new review records or later audit reports.

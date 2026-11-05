@@ -1,7 +1,9 @@
+import { validLawAnchor } from './lawAnchor.ts';
+import type { LawAnchor } from './lawAnchor.ts';
 import { proposals as samples } from './proposals.ts';
 import type { Proposal } from './proposals.ts';
 import type { Participation } from './participation.ts';
-export type ProposalDraft = { id: string; title: string; category: string; summary: string; text: string };
+export type ProposalDraft = { id: string; title: string; category: string; summary: string; text: string; sourceLaw?: LawAnchor };
 export type Revision = { id: string; proposalId: string; version: number; at: string; note: string; sections: Proposal['sections'] };
 export const categories = ['Housing', 'Food Systems', 'Governance', 'Education', 'Healthcare', 'Transportation', 'Environment', 'Other'];
 export const blankDraft = (): ProposalDraft => ({ id: crypto.randomUUID(), title: '', category: 'Other', summary: '', text: '' });
@@ -15,6 +17,7 @@ export function findBaseProposal(state: Participation, id: string) {
   return [...samples, ...state.proposals].find(p => p.id.toLowerCase() === id.trim().toLowerCase());
 }
 export function draftError(draft: ProposalDraft, state: Participation): string {
+  if (draft.sourceLaw !== undefined && !validLawAnchor(draft.sourceLaw)) return 'The source-law reference is invalid.';
   if (draft.title.trim().length < 5 || draft.title.trim().length > 160) return 'Use a title between 5 and 160 characters.';
   if (draft.summary.trim().length < 10 || draft.summary.trim().length > 500) return 'Use a summary between 10 and 500 characters.';
   if (draft.text.trim().length < 20 || draft.text.trim().length > 10000) return 'Use proposal wording between 20 and 10,000 characters.';
@@ -27,7 +30,7 @@ export function publishDraft(state: Participation, draft: ProposalDraft): { stat
   if (error) throw new Error(error);
   const proposal: Proposal = {
     id: `P-LOCAL-${draft.id.toUpperCase()}`, title: draft.title.trim(), category: draft.category,
-    summary: draft.summary.trim(), stage: 'Open for review', support: 0, version: 1,
+    summary: draft.summary.trim(), ...(draft.sourceLaw ? { sourceLaw: { ...draft.sourceLaw } } : {}), stage: 'Open for review', support: 0, version: 1,
     sections: draft.text.trim().split(/\n\s*\n/).map((text, i) => ({ id: `section-${i + 1}`, title: `Section ${i + 1}`, text: text.trim() })),
   };
   if (state.proposals.some(p => p.id === proposal.id)) throw new Error('This draft has already been submitted.');

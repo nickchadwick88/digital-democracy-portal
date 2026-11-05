@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import LawWorkflow from '../components/LawWorkflow';
 import Layout from '../components/Layout';
 import './LawExplorer.css';
 import LawCoverageMap from '../components/LawCoverageMap';
@@ -32,6 +34,16 @@ export default function LawExplorer() {
   async function open(id: string) {
     const value = await api<Source>('source?id=' + encodeURIComponent(id)); setSource(value); setCorrection(value.body || ''); setReason('');
   }
+  const [params] = useSearchParams();
+  const initialSource = params.get('source');
+  useEffect(() => {
+    if (!initialSource) return;
+    let cancelled = false;
+    api<Source>('source?id=' + encodeURIComponent(initialSource)).then(value => {
+      if (!cancelled) { setSource(value); setCorrection(value.body || ''); setReason(''); }
+    }).catch(problem => { if (!cancelled) setError(problem instanceof Error ? problem.message : 'Source could not be opened.'); });
+    return () => { cancelled = true; };
+  }, [initialSource]);
   const max = Math.max(1, ...(stats?.titles.map(t => t.count) || []));
   return <Layout title="Law research workspace" subtitle="Official-source text, a separate consolidated index, and traceable comparisons.">
     <section className="section-card">
@@ -55,6 +67,7 @@ export default function LawExplorer() {
           <label htmlFor="correction-reason">Evidence and reason</label><textarea id="correction-reason" value={reason} minLength={5} maxLength={4000} onChange={e => setReason(e.target.value)} required />
           <button disabled={busy || correction === source.body}>Submit correction draft</button></form></details>
     </section>}
+    {source && <LawWorkflow key={source.id} source={source} />}
     <section className="section-card"><h2>Compare provisions</h2><p>Choose two results above or paste their source IDs. Matching text alone does not establish matching legal effect.</p>
       <form onSubmit={e => { e.preventDefault(); task(async () => setComparison(await api<Comparison>('compare?first=' + encodeURIComponent(first) + '&second=' + encodeURIComponent(second)))); }}>
         <label htmlFor="compare-a">Source A</label><input id="compare-a" value={first} onChange={e => { setFirst(e.target.value); setComparison(null); }} required />

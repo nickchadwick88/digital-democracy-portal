@@ -27,6 +27,7 @@ function App() {
         <Route path="/voting" element={<VotingPortal />} />
         <Route path="/payment" element={<PaymentPortal />} />
         <Route path="/proposal/:id" element={<ProposalDetail />} />
+        <Route path="/draft/:id" element={<NewProposal />} />
         <Route path="/new-proposal" element={<NewProposal />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/law-explorer" element={<LawExplorer />} />

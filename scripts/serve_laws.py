@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from law_repository import connect,search,get_source,compare,consolidated,stats,propose_correction
 from law_agent import run_agent
+from law_workflow import corrections,transcription,review_correction,amendment,list_amendments,create_amendment,revise_amendment
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*args,database=None,**kwargs):
@@ -38,6 +39,18 @@ class Handler(SimpleHTTPRequestHandler):
                     elif parsed.path=="/api/laws/stats":
                         result=dict(stats(db),agent_configured=bool(os.environ.get("LAW_AGENT_MODEL")))
                     elif parsed.path=="/api/laws/search": result=search(db,get("q"),jurisdiction=get("jurisdiction") or None)
+                    elif parsed.path=="/api/laws/source-checks":
+                        audit_path=self.database.parent/"source-audit.json"
+                        if audit_path.is_file():
+                            audit=json.loads(audit_path.read_text())
+                            result={k:v for k,v in audit.items() if k not in {"findings","checked_source_ids"}}
+                            result["status"]="Checked for text fidelity" if get("source_id") in audit.get("checked_source_ids",[]) else "Not checked in available report"
+                            result["source_findings"]=[r for r in audit.get("findings",[]) if r.get("source_id")==get("source_id")]
+                        else: result={"kind":"Automated XML text-fidelity audit","status":"Not run","human_verification":"Not performed","legal_status":"Not assessed"}
+                    elif parsed.path=="/api/laws/corrections": result=corrections(db,get("source_id") or None)
+                    elif parsed.path=="/api/laws/transcription": result=transcription(db,get("source_id"))
+                    elif parsed.path=="/api/laws/amendments": result=list_amendments(db,get("source_id") or None)
+                    elif parsed.path=="/api/laws/amendment": result=amendment(db,get("id"),int(get("version")) if get("version") else None)
                     elif parsed.path=="/api/laws/source": result=get_source(db,get("id"))
                     elif parsed.path=="/api/laws/compare": result=compare(db,get("first"),get("second"))
                     elif parsed.path=="/api/laws/consolidated": result=consolidated(db)
@@ -67,6 +80,12 @@ class Handler(SimpleHTTPRequestHandler):
             with connect(self.database) as db:
                 if self.path=="/api/laws/corrections":
                     result=propose_correction(db,value["source_id"],value["proposed_text"],value["reason"])
+                elif self.path=="/api/laws/corrections/review":
+                    result=review_correction(db,**value)
+                elif self.path=="/api/laws/amendments":
+                    result=create_amendment(db,**value)
+                elif self.path=="/api/laws/amendments/revise":
+                    result=revise_amendment(db,**value)
                 elif self.path=="/api/laws/agent": result=run_agent(db,value["prompt"])
                 else: return self.respond(404,{"error":"Unknown endpoint."})
             return self.respond(200,result)

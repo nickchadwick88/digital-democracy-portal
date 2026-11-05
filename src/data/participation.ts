@@ -1,3 +1,4 @@
+import { validLawAnchor } from './lawAnchor.ts';
 import { proposals as samples } from './proposals.ts';
 import type { Proposal } from './proposals.ts';
 import type { ProposalDraft, Revision } from './proposalModel.ts';
@@ -24,8 +25,8 @@ export function parseParticipation(raw: string | null): Participation {
     !v.suggestions.every(x => record(x) && validBase(x) && text(x.sectionId) && text(x.text) && (x.quote === undefined || text(x.quote)))) throw new Error('Saved participation data is invalid.');
   const custom = v.proposals ?? [], drafts = v.drafts ?? [], revisions = v.revisions ?? [], reviews = v.sectionReviews ?? [];
   const preferences = v.preferences ?? emptyParticipation().preferences;
-  if (!Array.isArray(custom) || !custom.every(p => record(p) && text(p.id) && text(p.title) && text(p.summary) && text(p.category) && text(p.stage) && typeof p.support === 'number' && p.version === 1 && validSections(p.sections)) ||
-    !Array.isArray(drafts) || !drafts.every(d => record(d) && ['id', 'title', 'category', 'summary', 'text'].every(k => text(d[k]))) ||
+  if (!Array.isArray(custom) || !custom.every(p => record(p) && text(p.id) && text(p.title) && text(p.summary) && text(p.category) && text(p.stage) && typeof p.support === 'number' && p.version === 1 && validSections(p.sections) && (p.sourceLaw === undefined || validLawAnchor(p.sourceLaw))) ||
+    !Array.isArray(drafts) || !drafts.every(d => record(d) && ['id', 'title', 'category', 'summary', 'text'].every(k => text(d[k])) && (d.sourceLaw === undefined || validLawAnchor(d.sourceLaw))) ||
     !Array.isArray(revisions) || !revisions.every(r => record(r) && validBase(r) && text(r.note) && validSections(r.sections)) ||
     !Array.isArray(reviews) || !reviews.every(r => record(r) && validBase(r) && text(r.sectionId) && sectionChoices.includes(r.choice)) ||
     !record(preferences) || typeof preferences.welcomeSound !== 'boolean' || typeof preferences.largeText !== 'boolean') throw new Error('Saved proposal data is invalid.');
