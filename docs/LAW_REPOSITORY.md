@@ -128,3 +128,7 @@ The downloaded legacy Qwen3 template printed function structs instead of explici
 The app now rejects output-budget exhaustion, incomplete provider responses and unparsed thinking markup instead of displaying them as completed answers. Benchmark checks also require concise completed answers. A refusal mentioning the user's requested fixture is not treated as a fabricated factual citation.
 
 The non-thinking validation alias uses an unconditional empty thinking block and the documented Qwen /no_think soft switch (LAW_AGENT_QWEN_NO_THINK=true). This alias is explicitly for non-thinking operation. A native tool-call probe must complete before the ten-case suite is permitted to run. Failed probes remain evidence of an unsuitable configuration; they are not counted as successful validation.
+
+### Validation disposition (November 6, 2026)
+
+The baseline and three derived-template probes did not satisfy live-AI acceptance. The tested Qwen3/Ollama stack remains unapproved; it was not activated as a persistent service. See LIVE_AI_VALIDATION.md for the public reproducibility summary. Passing ordinary code tests does not change that disposition. Heavy live runs are now manually dispatched; normal code checks remain automatic.

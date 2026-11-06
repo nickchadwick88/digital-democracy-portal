@@ -1,8 +1,5 @@
 name: Live AI validation
 on:
-  push:
-    branches: [feat/recover-voting-prototype]
-    paths: ['scripts/validate_live_agent.py', 'scripts/law_agent.py', 'scripts/configure_validation_model.py', '.github/workflows/live-ai-validation.yml']
   workflow_dispatch:
 permissions:
   contents: read
