@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useParticipation } from './ParticipationContext';
 type Source = { id: string; citation: string; release: string; source_url: string; text_hash: string; body?: string };
@@ -34,7 +34,8 @@ export default function LawWorkflow({ source }: { source: Source }) {
   const [active, setActive] = useState<Amendment | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   const original = source.body || '';
   const [range, setRange] = useState({ start: 0, end: Array.from(original).length, text: original });
-  const [selection, setSelection] = useState<typeof range | null>(null);
+  const sourceBox = useRef<HTMLTextAreaElement>(null);
+  const [exactQuote, setExactQuote] = useState('');
   const [title, setTitle] = useState('Amend ' + source.citation), [replacement, setReplacement] = useState(original), [reason, setReason] = useState('');
   async function reload() {
     const id = encodeURIComponent(source.id);
@@ -49,13 +50,24 @@ export default function LawWorkflow({ source }: { source: Source }) {
     setActive(draft); setTitle(draft.title); setReplacement(draft.replacement); setReason(draft.reason);
     setRange({ start: draft.start_offset, end: draft.end_offset, text: draft.original_excerpt });
   }
-  function captureSelection(element: HTMLTextAreaElement) {
-    const start = element.selectionStart, end = element.selectionEnd;
-    if (end > start) setSelection({ start: Array.from(original.slice(0, start)).length, end: Array.from(original.slice(0, end)).length, text: original.slice(start, end) });
+  function applySelection(start: number, end: number) {
+    if (end <= start || !original.slice(start, end).trim()) { setError('Select substantive source wording first.'); return; }
+    const selected = { start: Array.from(original.slice(0, start)).length, end: Array.from(original.slice(0, end)).length, text: original.slice(start, end) };
+    setRange(selected); setReplacement(selected.text); setError('');
+  }
+  function useSelection() {
+    const element = sourceBox.current;
+    if (element) applySelection(element.selectionStart, element.selectionEnd);
+  }
+  function findQuote() {
+    const start = original.indexOf(exactQuote);
+    if (!exactQuote.trim() || start < 0) { setError('Enter wording that appears exactly in the original source.'); return; }
+    if (original.indexOf(exactQuote, start + 1) !== -1) { setError('That wording appears more than once. Select the exact occurrence in the source box.'); return; }
+    applySelection(start, start + exactQuote.length);
   }
   function reset() {
     setActive(null); setRange({ start: 0, end: Array.from(original).length, text: original });
-    setTitle('Amend ' + source.citation); setReplacement(original); setReason(''); setSelection(null);
+    setTitle('Amend ' + source.citation); setReplacement(original); setReason(''); setExactQuote('');
   }
   async function save() {
     const value = active
@@ -82,7 +94,7 @@ export default function LawWorkflow({ source }: { source: Source }) {
       <details><summary>Transcription review audit trail ({transcript.history.length})</summary>{transcript.history.map(review => <p key={review.id}>{review.at} · {review.decision} · {review.reviewer} · {review.reason}</p>)}</details></>}
     <h3>Correction queue</h3>{items.map(item => <CorrectionReview key={item.id + item.review_head + item.status} item={item} run={run} reload={reload} busy={busy} />)}
     <h3>Draft a legal amendment</h3><p>Select wording from the original extraction, then enter its proposed replacement. An empty replacement requests deletion. Saved versions preserve the original source hash and selection.</p>
-    {!active && <><label htmlFor="amendment-original">Original statutory body — select the words to amend</label><textarea id="amendment-original" readOnly rows={8} value={original} onSelect={event => captureSelection(event.currentTarget)} onMouseUp={event => captureSelection(event.currentTarget)} onKeyUp={event => captureSelection(event.currentTarget)} /><button disabled={!selection || busy} onClick={() => { if (selection) { setRange(selection); setReplacement(selection.text); } }}>Use selected wording</button></>}
+    {!active && <><label htmlFor="amendment-original">Original statutory body — select the words to amend</label><textarea id="amendment-original" ref={sourceBox} readOnly rows={8} value={original} /><button disabled={busy} onMouseDown={event => event.preventDefault()} onClick={useSelection}>Use selected wording</button><label htmlFor="amendment-quote">Exact wording to target — alternative to selecting</label><textarea id="amendment-quote" value={exactQuote} maxLength={200000} onChange={event => setExactQuote(event.target.value)} /><button disabled={busy} onClick={findQuote}>Use exact wording</button></>}
     <p>Target: characters {range.start}–{range.end} of the pinned source extraction.</p><details><summary>Original target wording</summary><pre className="statute-text">{range.text}</pre></details>
     <form onSubmit={e => { e.preventDefault(); run(save); }}>
       <label htmlFor="amendment-title">Amendment title</label><input id="amendment-title" value={title} minLength={5} maxLength={160} onChange={e => setTitle(e.target.value)} required />

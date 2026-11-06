@@ -17,20 +17,41 @@ NS={"u":"http://xml.house.gov/schemas/uslm/1.0"}
 SOURCE="https://uscode.house.gov/download.html"
 def local(node): return node.tag.rsplit("}",1)[-1]
 def text(node): return "" if node is None else "".join(node.itertext()).strip()
+EXTRACTOR_VERSION="uslm-text-v2"
 def extract_body(section):
-    paragraphs=[]
+    """Preserve node text and every inline tail; only layout whitespace is added."""
+    output=[]
+    blocks={"p","num","heading","chapeau","continuation","content","subsection",
+      "paragraph","subparagraph","clause","subclause","item","subitem","table",
+      "thead","tbody","tfoot","tr","td","th","br"}
     def walk(node):
-        if local(node) in {"notes","sourceCredit"}: return
-        if local(node) in {"p","num","heading","chapeau","continuation"} or not list(node):
-            value=text(node)
-            if value: paragraphs.append(value)
-        else:
-            for child in node: walk(child)
+        name=local(node)
+        if name in {"notes","sourceCredit"}:return
+        if name in blocks:output.append("\n\n")
+        if node.text:output.append(node.text)
+        for child in node:
+            walk(child)
+            if child.tail:output.append(child.tail)
+        if name in blocks:output.append("\n\n")
     for child in section:
-        if local(child) not in {"num","heading","notes","sourceCredit"}: walk(child)
-    return "\n\n".join(paragraphs)
+        if local(child) not in {"num","heading","notes","sourceCredit"}:walk(child)
+    import re
+    result="".join(output).strip()
+    return re.sub(r"\n[ \t]*\n(?:[ \t]*\n)+","\n\n",result)
+
+def ensure_extractor(db):
+    db.execute("CREATE TABLE IF NOT EXISTS corpus_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
+    previous=db.execute("SELECT value FROM corpus_metadata WHERE key='extractor_version'").fetchone()
+    if previous and previous["value"]!=EXTRACTOR_VERSION:
+        raise ValueError("Different extraction version: rebuild into a separate output directory.")
+    if not previous:
+        if db.execute("SELECT COUNT(*) FROM imports").fetchone()[0]:
+            raise ValueError("Legacy corpus preserved: use a new output directory for text-v2.")
+        db.execute("INSERT INTO corpus_metadata VALUES ('extractor_version',?)",(EXTRACTOR_VERSION,))
+    db.commit()
 
 def ingest_archive(db, raw, archive_name, url, release=RELEASE):
+    ensure_extractor(db)
     archive_hash=hashlib.sha256(raw).hexdigest()
     import_id=release+":"+archive_name
     old=db.execute("SELECT * FROM imports WHERE id=?",(import_id,)).fetchone()
@@ -78,7 +99,7 @@ def ingest_archive(db, raw, archive_name, url, release=RELEASE):
         db.execute("INSERT INTO imports VALUES (?,?,?,?,?)",(import_id,url,archive_hash,count,now()))
     return {"id":import_id,"sections":count,"sha256":archive_hash}
 
-def collect(output,titles):
+def collect(output,titles,source_cache=None):
     output.mkdir(parents=True,exist_ok=True); originals=output/"originals";originals.mkdir(exist_ok=True)
     with connect(output/"laws.sqlite") as db:
         for title in titles:
@@ -88,6 +109,14 @@ def collect(output,titles):
             name="xml_usc"+label+"@"+RELEASE+".zip"
             url="https://uscode.house.gov/download/releasepoints/us/pl/119/136/"+name.replace("@","%40")
             archive=originals/name
+            if not archive.exists() and source_cache is not None:
+                import shutil
+                cached=source_cache/name
+                manifest=json.loads((source_cache.parent/"manifest.json").read_text())
+                reference=next((row for row in manifest["imports"] if row["id"]==RELEASE+":"+name),None)
+                if not reference or not cached.is_file() or hashlib.sha256(cached.read_bytes()).hexdigest()!=reference["sha256"]:
+                    raise ValueError("Cached official archive is absent or its recorded hash differs.")
+                shutil.copy2(cached,archive)
             if not archive.exists():
                 request=urllib.request.Request(url,headers={"User-Agent":"DigitalDemocracyResearch/0.1"})
                 with urllib.request.urlopen(request,timeout=90) as response:
@@ -98,7 +127,7 @@ def collect(output,titles):
                     if z.testzip(): raise ValueError("Archive checksum failed.")
                 archive.write_bytes(raw)
             result=ingest_archive(db,archive.read_bytes(),name,url)
-            manifest=dict(stats(db),release_point=RELEASE,official_catalog=SOURCE,
+            manifest=dict(stats(db),extractor_version=EXTRACTOR_VERSION,release_point=RELEASE,official_catalog=SOURCE,
               scope="Imported U.S. Code title archives only; not all federal, state, local or world law.",
               effective_date_policy="Unknown per provision; release point is not an effective date.",
               notes_policy="Notes and credits retained separately. Some notes contain enacted provisions; search currently indexes section bodies only.")
@@ -114,5 +143,6 @@ if __name__=="__main__":
     p=argparse.ArgumentParser();p.add_argument("--output",type=Path,required=True)
     p.add_argument("--titles",nargs="+",default=["1"])
     p.add_argument("--export",action="store_true")
-    a=p.parse_args();collect(a.output,a.titles)
+    p.add_argument("--source-cache",type=Path)
+    a=p.parse_args();collect(a.output,a.titles,a.source_cache)
     if a.export: export(a.output)

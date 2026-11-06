@@ -64,6 +64,21 @@ class RepositoryTest(unittest.TestCase):
         self.assertNotEqual(a["text_hash"],b["text_hash"])
         self.assertEqual(a["citation"],b["citation"])
         with self.assertRaises(ValueError):get_source(self.db,"uscode:fixture:/us/usc/t5/s999")
+    def test_mixed_content_preserves_prefix_inline_date_and_tails(self):
+        from collect_uscode import extract_body
+        import xml.etree.ElementTree as ET
+        xml='<section xmlns="http://xml.house.gov/schemas/uslm/1.0"><num>1</num><heading>Heading</heading><subsection><num>(a)</num><content>Beginning <date>January 1, 1950</date>, retain every word and con<em>stitu</em>tion.</content></subsection><notes>Not statutory body.</notes></section>'
+        body=extract_body(ET.fromstring(xml))
+        self.assertIn("Beginning January 1, 1950, retain every word and constitution.",body)
+        self.assertNotIn("Not statutory body",body)
+        self.assertNotIn("Heading",body)
+    def test_new_extractor_refuses_to_relabel_or_modify_legacy_corpus(self):
+        from collect_uscode import ensure_extractor
+        self.db.execute("INSERT INTO imports VALUES (?,?,?,?,?)",("legacy","https://example.org","abc",1,now()))
+        self.db.commit()
+        before=get_source(self.db,"test:a")
+        with self.assertRaisesRegex(ValueError,"Legacy corpus preserved"):ensure_extractor(self.db)
+        self.assertEqual(get_source(self.db,"test:a"),before)
     def test_agent_uses_tools_and_saves_trace_without_source_writes(self):
         replies=iter([
           {"role":"assistant","content":"","tool_calls":[{"function":{"name":"search","arguments":{"query":"safe exit"}}}]},

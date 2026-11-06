@@ -58,7 +58,8 @@ try {
   const sourceBox = page.getByLabel('Original statutory body — select the words to amend', { exact: true });
   await sourceBox.focus();
   await sourceBox.press('Control+Home');
-  await sourceBox.press('Control+Shift+ArrowRight');
+  await sourceBox.press('Shift+ArrowRight');
+  assert.ok(await sourceBox.evaluate(element => element.selectionEnd > element.selectionStart), 'Keyboard selection must be nonempty');
   await page.getByRole('button', { name: 'Use selected wording', exact: true }).click();
   await page.getByLabel('Amendment title', { exact: true }).fill('CI source-linked demo amendment');
   await page.getByLabel('Proposed replacement wording', { exact: true }).fill('A short isolated test replacement.');

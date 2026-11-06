@@ -14,7 +14,11 @@ def expected_text(section):
     clean=copy.deepcopy(section)
     for parent in list(clean.iter()):
         for child in list(parent):
-            if local(child) in {"notes","sourceCredit"}:parent.remove(child)
+            if local(child) in {"notes","sourceCredit"}:
+                siblings=list(parent);index=siblings.index(child);tail=child.tail or ""
+                if index: siblings[index-1].tail=(siblings[index-1].tail or "")+tail
+                else: parent.text=(parent.text or "")+tail
+                parent.remove(child)
     return "".join("".join(child.itertext()) for child in clean if local(child) not in {"num","heading"})
 def normalized(value):return "".join(value.split())
 def inspect_xml(raw,rows):
