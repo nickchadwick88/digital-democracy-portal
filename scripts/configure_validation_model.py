@@ -19,20 +19,20 @@ def configure(base,model,output):
     if count!=1:raise ValueError("Expected one legacy tool-schema template expression; inspect this model before patching.")
     generation='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant\n<think>\n'
     if patched.count(generation)!=1:raise ValueError("Expected the reviewed Qwen3 unconditional thinking prefix.")
-    replacement='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant\n{{ if and $.IsThinkSet (not $.Think) }}<think>\n\n</think>\n\n{{ else }}<think>\n{{ end }}'
+    replacement='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant\n<think>\n\n</think>\n\n'
     patched=patched.replace(generation,replacement)
     metadata={"base_model":base,"derived_model":model,
       "base_template_sha256":hashlib.sha256(template.encode()).hexdigest(),
       "derived_template_sha256":hashlib.sha256(patched.encode()).hexdigest(),
       "base_template":template,"derived_template":patched,
-      "changes":["Explicit JSON serialization for native function schemas.","Respect think=false with the model's empty thinking prefix."],
+      "changes":["Explicit JSON serialization for native function schemas.","Force the reviewed non-thinking alias to use an empty thinking prefix."],
       "notice":"Derived template, same downloaded base weights. This is not the unmodified model-tag configuration."}
     (output/"model-template-metadata.json").write_text(json.dumps(metadata,indent=2))
     api("/api/create",{"model":model,"from":base,"template":patched,"stream":False})
     tools=[{"type":"function","function":{"name":"lookup_code","description":"Look up the value for a provided key.",
       "parameters":{"type":"object","properties":{"key":{"type":"string"}},"required":["key"]}}}]
     probe=api("/api/chat",{"model":model,"think":False,"stream":False,"options":{"temperature":0,"num_ctx":4096,"num_predict":160},
-      "messages":[{"role":"system","content":"Use the lookup_code tool when asked; do not guess values."},
+      "messages":[{"role":"system","content":"Use the lookup_code tool when asked; do not guess values. /no_think"},
                   {"role":"user","content":"Call lookup_code with key probe."}],"tools":tools})
     # Do not collect separately typed reasoning fields.
     message=probe.get("message",{})
@@ -41,6 +41,7 @@ def configure(base,model,output):
       "thinking_field_characters":len(message.get("thinking",""))}
     (output/"provider-tool-probe.json").write_text(json.dumps(saved,indent=2))
     calls=message.get("tool_calls",[])
+    assert not re.search(r"</?think>",message.get("content",""),re.I),"Provider leaked reasoning markup into answer content."
     assert probe.get("done") and probe.get("done_reason")!="length","Provider probe was incomplete."
     assert any(c.get("function",{}).get("name")=="lookup_code" and c["function"].get("arguments",{}).get("key")=="probe" for c in calls),"Provider did not emit a native tool call."
     print(json.dumps({"native_tool_probe":"passed","derived_model":model,"template_sha256":metadata["derived_template_sha256"]}),flush=True)

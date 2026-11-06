@@ -75,6 +75,7 @@ def run_agent(db,prompt,model=None,client=request_model):
       "You may suggest corrections in your answer, but cannot edit original law or enact changes. "
       "Your answer is a research draft requiring verification."},
       {"role":"user","content":prompt}]
+    if os.environ.get("LAW_AGENT_QWEN_NO_THINK")=="true":messages[0]["content"]+="\n/no_think"
     trace=[]
     # Coverage is mandatory, independent of whether the model asks for it.
     raw_coverage=stats(db)

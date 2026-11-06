@@ -15,6 +15,7 @@ jobs:
       LAW_AGENT_BASE_MODEL: qwen3:4b
       LAW_AGENT_MODEL: dd-qwen3-4b-tools
       LAW_AGENT_THINK: 'false'
+      LAW_AGENT_QWEN_NO_THINK: 'true'
       LAW_AGENT_CONTEXT: '8192'
       LAW_AGENT_TOKENS: '640'
       LAW_AGENT_TIMEOUT: '90'

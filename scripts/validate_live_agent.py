@@ -174,7 +174,7 @@ def main():
     before={key:fingerprint(path) for key,path in paths.items()}
     metadata={"kind":"Live model smoke validation","model":os.environ["LAW_AGENT_MODEL"],
       "ollama_version":local_json("/api/version"),"installed_models":local_json("/api/tags"),
-      "configuration":{key:os.environ.get(key) for key in ["LAW_AGENT_THINK","LAW_AGENT_CONTEXT","LAW_AGENT_TOKENS","LAW_AGENT_TIMEOUT","LAW_AGENT_EVIDENCE_LIMIT"]},
+      "configuration":{key:os.environ.get(key) for key in ["LAW_AGENT_QWEN_NO_THINK","LAW_AGENT_THINK","LAW_AGENT_CONTEXT","LAW_AGENT_TOKENS","LAW_AGENT_TIMEOUT","LAW_AGENT_EVIDENCE_LIMIT"]},
       "started_at":now(),"notice":"Actual local-model responses through production tools. Mechanical criteria plus retained evidence; not legal correctness, broad capability or adversarial safety certification."}
     records=[]
     for case in CASES:
