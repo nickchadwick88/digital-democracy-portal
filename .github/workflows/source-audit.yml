@@ -1,0 +1,30 @@
+name: Audit retained statutory source text
+on:
+  push:
+    branches: [feat/recover-voting-prototype]
+    paths: ['scripts/audit_source_text.py', '.github/workflows/source-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: official-law-corpus-119-136
+          path: law-corpus
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 42063808408
+      - run: python3 scripts/audit_source_text.py --corpus law-corpus
+      - uses: actions/upload-artifact@v4
+        with:
+          name: statutory-source-text-audit
+          path: law-corpus/source-audit.json
+          retention-days: 90

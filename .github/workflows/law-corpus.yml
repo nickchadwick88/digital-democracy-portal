@@ -1,0 +1,28 @@
+name: Collect official statutory corpus
+on:
+  push:
+    branches: [feat/recover-voting-prototype]
+    paths: ['scripts/collect_uscode.py', 'scripts/law_repository.py', 'scripts/collect_boundaries.py', '.github/workflows/law-corpus.yml']
+  workflow_dispatch:
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect official US Code title archives
+        run: python3 scripts/collect_uscode.py --output law-corpus --titles {1..52} 54 05a 11a 18a --export
+      - name: Collect Census state boundaries
+        run: python3 scripts/collect_boundaries.py --output law-corpus/us-states.json
+      - name: Verify source hashes and integrity
+        run: python3 scripts/verify_corpus.py --corpus law-corpus
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-law-corpus-119-136
+          path: law-corpus/
+          retention-days: 90
+          if-no-files-found: error
