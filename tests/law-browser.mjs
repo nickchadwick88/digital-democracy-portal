@@ -61,6 +61,12 @@ try {
   await sourceBox.press('Shift+ArrowRight');
   assert.ok(await sourceBox.evaluate(element => element.selectionEnd > element.selectionStart), 'Keyboard selection must be nonempty');
   await page.getByRole('button', { name: 'Use selected wording', exact: true }).click();
+  const uniqueQuote = before.body.slice(0, 80);
+  if (uniqueQuote.trim() && before.body.indexOf(uniqueQuote, 1) === -1) {
+    await page.getByLabel('Exact wording to target — alternative to selecting', { exact: true }).fill(uniqueQuote);
+    await page.getByRole('button', { name: 'Use exact wording', exact: true }).click();
+    assert.equal(await page.getByLabel('Proposed replacement wording', { exact: true }).inputValue(), uniqueQuote);
+  }
   await page.getByLabel('Amendment title', { exact: true }).fill('CI source-linked demo amendment');
   await page.getByLabel('Proposed replacement wording', { exact: true }).fill('A short isolated test replacement.');
   await page.getByLabel('Reason for the legal change', { exact: true }).fill('Verify demo proposal provenance and version-bound voting.');

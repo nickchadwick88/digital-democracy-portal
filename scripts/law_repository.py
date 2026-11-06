@@ -109,7 +109,11 @@ def propose_correction(db, source_id, proposed_text, reason):
     return request
 
 def stats(db):
-    return {"source_records":db.execute("SELECT COUNT(*) FROM sources").fetchone()[0],
+    version="not recorded"
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='corpus_metadata'").fetchone():
+        row=db.execute("SELECT value FROM corpus_metadata WHERE key='extractor_version'").fetchone()
+        if row:version=row["value"]
+    return {"extractor_version":version,"source_records":db.execute("SELECT COUNT(*) FROM sources").fetchone()[0],
       "nonempty_records":db.execute("SELECT COUNT(*) FROM sources s JOIN texts t ON s.text_hash=t.hash WHERE t.body<>''").fetchone()[0],
       "unique_nonempty_texts":db.execute("SELECT COUNT(*) FROM texts WHERE body<>''").fetchone()[0],
       "jurisdictions":[dict(r) for r in db.execute("SELECT jurisdiction,COUNT(*) AS count FROM sources GROUP BY jurisdiction")],

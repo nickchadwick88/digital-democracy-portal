@@ -7,7 +7,7 @@ import LawCoverageMap from '../components/LawCoverageMap';
 import type { LawBoundaries } from '../components/LawCoverageMap';
 
 type Source = { id: string; citation: string; heading: string; jurisdiction: string; release: string; source_url: string; text_hash: string; body?: string; excerpt?: string; notes?: string; credit?: string };
-type Stats = { source_records: number; unique_nonempty_texts: number; nonempty_records: number; pending_corrections: number; coverage_note: string; transcription_status: string; agent_configured: boolean; titles: { title_number: string; count: number }[]; jurisdictions: { jurisdiction: string; count: number }[] };
+type Stats = { extractor_version?: string; source_records: number; unique_nonempty_texts: number; nonempty_records: number; pending_corrections: number; coverage_note: string; transcription_status: string; agent_configured: boolean; titles: { title_number: string; count: number }[]; jurisdictions: { jurisdiction: string; count: number }[] };
 type Group = { hash: string; excerpt: string; occurrences: number; references: Source[] };
 type Comparison = { first: Source; second: Source; identical_text: boolean; legal_equivalence: string; diff: string };
 type Agent = { answer: string; status: string; trace: { tool: string; arguments: Record<string, string> }[] };
@@ -51,7 +51,7 @@ export default function LawExplorer() {
       <button disabled={busy} onClick={() => task(async () => { setStats(await api<Stats>('stats')); setBoundaries(await api<LawBoundaries>('boundaries')); })}>Connect to corpus</button>
       <p className="muted">This workspace requires the local corpus server. A hosted static preview does not contain the full database.</p>
       {stats && <><div className="corpus-stats"><strong>{stats.source_records.toLocaleString()}<small>source records</small></strong><strong>{stats.unique_nonempty_texts.toLocaleString()}<small>unique nonempty texts</small></strong><strong>{stats.pending_corrections}<small>pending corrections</small></strong></div>
-        <p>{stats.coverage_note}</p><p className="muted">{stats.transcription_status} Release points are not individual effective dates.</p></>}
+        <p>{stats.coverage_note}</p><p>Extraction version: {stats.extractor_version || 'not recorded'}.</p>{stats.extractor_version !== 'uslm-text-v2' && <p className="version-notice">This dataset predates the text-v2 mixed-content fix. Use the rebuilt snapshot and inspect the original source before relying on its wording.</p>}<p className="muted">{stats.transcription_status} Release points are not individual effective dates.</p></>}
     </section>
     <section className="section-card"><h2>Search and reference</h2><form onSubmit={e => { e.preventDefault(); task(async () => { setResults(await api<Source[]>('search?q=' + encodeURIComponent(query))); setSearched(true); }); }}>
       <label htmlFor="corpus-query">Words or citation</label><div className="law-actions"><input id="corpus-query" value={query} maxLength={500} onChange={e => setQuery(e.target.value)} required /><button disabled={busy}>Search</button></div></form>

@@ -89,3 +89,20 @@ Run automated source checks with:
 This independent audit compares whitespace-insensitive body text against retained XML and flags mismatches. It does not establish legal force, effective dates, table layout or legal meaning. No human verification is inferred. The report is displayed when source-audit.json is beside laws.sqlite.
 
 Backend correction reviews and amendment histories are in laws.sqlite; browser proposal copies and votes are in browser backups. Back up both. Existing downloaded snapshots do not automatically contain new review records or later audit reports.
+
+
+## Text-v2 rebuild and previous snapshot warning
+
+The first extractor could drop surrounding words when a content container included inline elements (for example a date). The independent audit flagged 16,695 of 60,463 records for investigation. Do not treat the initial extraction as a complete transcription.
+
+The text-v2 extractor preserves node text, inline element text and all tails. Rebuilds use a **new output directory** and validate retained archive hashes. A legacy database cannot be relabeled or updated in place. The rebuilt snapshot includes an independent source-text audit and an old/new hash comparison report. Original XML archives are retained unchanged.
+
+All records must pass the whitespace-insensitive comparison before adopting the rebuilt snapshot. This still does not certify table layout, mathematical interpretation, legal force or effective dates. Source hashes anchor correction and amendment records; old review data must not be blindly merged into a different extraction snapshot.
+
+The selection editor reads the current textarea range directly and also provides an exact-wording fallback. Repeated exact phrases require selecting the intended occurrence rather than guessing.
+
+    python3 scripts/collect_uscode.py --output ../law-corpus-v2 --source-cache ../law-corpus/originals --titles 1 2 3 4 5 --export
+    python3 scripts/audit_source_text.py --corpus ../law-corpus-v2
+    python3 scripts/compare_extractions.py --old ../law-corpus --new ../law-corpus-v2
+
+Use all previously collected titles when comparing the complete corpus; the five-title example is only a small local rebuild example.
