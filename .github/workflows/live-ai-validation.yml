@@ -2,7 +2,7 @@ name: Live AI validation
 on:
   push:
     branches: [feat/recover-voting-prototype]
-    paths: ['scripts/validate_live_agent.py', '.github/workflows/live-ai-validation.yml']
+    paths: ['scripts/validate_live_agent.py', 'scripts/law_agent.py', 'scripts/configure_validation_model.py', '.github/workflows/live-ai-validation.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,9 +10,10 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     env:
-      LAW_AGENT_MODEL: qwen3:4b
+      LAW_AGENT_BASE_MODEL: qwen3:4b
+      LAW_AGENT_MODEL: dd-qwen3-4b-tools
       LAW_AGENT_THINK: 'false'
       LAW_AGENT_CONTEXT: '8192'
       LAW_AGENT_TOKENS: '640'
@@ -62,7 +63,9 @@ jobs:
                   time.sleep(.5)
           PY
       - name: Load actual tool-capable model
-        run: ollama pull "$LAW_AGENT_MODEL"
+        run: ollama pull "$LAW_AGENT_BASE_MODEL"
+      - name: Configure and probe reviewed tool and non-thinking template
+        run: python3 scripts/configure_validation_model.py --base "$LAW_AGENT_BASE_MODEL" --model "$LAW_AGENT_MODEL" --output live-validation
       - name: Validate live model through application tools and HTTP endpoint
         run: python3 scripts/validate_live_agent.py --corpus law-corpus --output live-validation
       - uses: actions/upload-artifact@v4

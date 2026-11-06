@@ -117,3 +117,12 @@ It exercises the real app HTTP agent endpoint plus source reading, verbatim quot
 Mechanical smoke criteria are deliberately narrower than legal correctness. Passing these cases cannot certify legal reasoning, adversarial safety, production readiness or all future model responses. Failed cases remain in the report and must not be described as passed. Live use requires the model service to be running; a completed CI benchmark does not create a permanent hosted assistant.
 
 Runtime controls: LAW_AGENT_CONTEXT (2,048–32,768 tokens), LAW_AGENT_TOKENS (128–2,048), LAW_AGENT_TIMEOUT (10–300 seconds), LAW_AGENT_EVIDENCE_LIMIT (1,000–60,000 characters) and optional LAW_AGENT_THINK=true/false. Validation uses context 8,192, output 640, timeout 90 seconds, evidence 12,000 characters and thinking disabled. Coverage metadata is compacted to preserve the user's actual question within context.
+
+
+### First live run and template remediation
+
+The unmodified Qwen3 4B configuration failed live validation. Its initial mechanical score was 3/10, but review found unfinished deliberation counted as answers; that score does not mean three useful verified answers. No database retrieval/comparison tool calls were completed, one case timed out, and source/workflow fingerprints remained unchanged.
+
+The downloaded legacy Qwen3 template printed function structs instead of explicit JSON and did not honor think=false in the generation prefix. A separately named derived model now patches only the template: JSON-serialize function schemas and use Qwen's empty thinking prefix when thinking is disabled. Base weights remain unchanged; original/derived template hashes and a native function-call probe are retained. This derived configuration must be validated independently and must not be presented as validation of the unmodified model tag.
+
+The app now rejects output-budget exhaustion, incomplete provider responses and unparsed thinking markup instead of displaying them as completed answers. Benchmark checks also require concise completed answers. A refusal mentioning the user's requested fixture is not treated as a fabricated factual citation.

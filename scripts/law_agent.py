@@ -52,7 +52,14 @@ def request_model(model,messages,tools):
     with opener.open(req,timeout=bounded_setting('LAW_AGENT_TIMEOUT',120,10,300)) as response:
         raw=response.read(4*1024*1024+1)
     if len(raw)>4*1024*1024: raise ValueError("Model response exceeded limit.")
-    return json.loads(raw)["message"]
+    response=json.loads(raw)
+    if response.get("done") is not True or response.get("done_reason")=="length":
+        raise ValueError("The model did not finish within its output budget. No partial answer was delivered.")
+    message=response.get("message")
+    if not isinstance(message,dict):raise ValueError("The model returned an invalid message.")
+    if re.search(r"</?think>",message.get("content",""),re.I):
+        raise ValueError("The model returned reasoning markup as answer text. Check its chat template.")
+    return message
 
 def run_agent(db,prompt,model=None,client=request_model):
     model=model or os.environ.get("LAW_AGENT_MODEL")

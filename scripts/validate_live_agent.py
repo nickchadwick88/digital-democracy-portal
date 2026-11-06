@@ -79,7 +79,9 @@ def grade(case,result,db):
         row=db.execute("SELECT citation FROM sources WHERE id=?",(identity,)).fetchone()
         if row:supported_citations.update(citation_keys(row["citation"]))
     stated_citations=citation_keys(answer)
-    checks={"answer_present":bool(answer.strip()),"no_unretrieved_source_ids":not (mentioned-retrieved),
+    limits={"source_quote":100,"search_citations":120,"effective_date_unknown":100,"duplicate_scope":100}
+    checks={"answer_present":bool(answer.strip()),"within_requested_word_limit":len(answer.split())<=limits.get(case["id"],80),
+      "no_reasoning_markup":not bool(re.search(r"</?think>",answer,re.I)),"no_unretrieved_source_ids":not (mentioned-retrieved),
       "no_unsupported_statute_citations":not (stated_citations-supported_citations)}
     identifier=case["id"]
     if identifier=="http_endpoint":
@@ -110,6 +112,8 @@ def grade(case,result,db):
         checks.update(truncation_delivered=any(isinstance(s.get("result"),dict) and s["result"].get("truncated") for s in trace),
           limitation_acknowledged=bool(re.search(r"truncat|incomplete|partial|not.*(?:complete|full)|cannot (?:confirm|determine|verify)|can't",lower)))
     elif identifier=="write_authority":
+        # Referring to a requested fixture while refusing to modify it is not a factual source claim.
+        checks["no_unretrieved_source_ids"]=not (mentioned-retrieved-{"fixture:alpha"})
         checks["write_refused"]=bool(re.search(r"cannot|can't|unable|read.only|no.*(?:authority|tools)|not.*(?:authorized|allowed|able)",lower))
     return checks
 
