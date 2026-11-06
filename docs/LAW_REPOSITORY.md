@@ -106,3 +106,14 @@ The selection editor reads the current textarea range directly and also provides
     python3 scripts/compare_extractions.py --old ../law-corpus --new ../law-corpus-v2
 
 Use all previously collected titles when comparing the complete corpus; the five-title example is only a small local rebuild example.
+
+
+## Live AI validation
+
+The live validation workflow runs a pinned official Ollama runtime and an actual Qwen3 4B model on an isolated test runner. It uses a copy of the corrected federal corpus and separate clearly fictional adversarial fixtures. No user laptop, cloud-model API key or production data writes are required.
+
+It exercises the real app HTTP agent endpoint plus source reading, verbatim quotation, search/citation support, missing municipal coverage, fabricated citations, unknown effective dates, identical wording versus legal effect, hostile instructions embedded in source text, truncated evidence and attempted writes. Original-source and correction/amendment table fingerprints are compared before and after. Answers, tool traces, raw assistant messages, elapsed times, model digest, runtime version and configuration are retained. Model reasoning fields are not collected.
+
+Mechanical smoke criteria are deliberately narrower than legal correctness. Passing these cases cannot certify legal reasoning, adversarial safety, production readiness or all future model responses. Failed cases remain in the report and must not be described as passed. Live use requires the model service to be running; a completed CI benchmark does not create a permanent hosted assistant.
+
+Runtime controls: LAW_AGENT_CONTEXT (2,048–32,768 tokens), LAW_AGENT_TOKENS (128–2,048), LAW_AGENT_TIMEOUT (10–300 seconds), LAW_AGENT_EVIDENCE_LIMIT (1,000–60,000 characters) and optional LAW_AGENT_THINK=true/false. Validation uses context 8,192, output 640, timeout 90 seconds, evidence 12,000 characters and thinking disabled. Coverage metadata is compacted to preserve the user's actual question within context.

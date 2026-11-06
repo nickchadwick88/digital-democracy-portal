@@ -27,15 +27,29 @@ def execute(db,name,args):
     if name=="consolidated": return consolidated(db,limit=8)
     return stats(db)
 
+def bounded_setting(name,default,minimum,maximum):
+    raw=os.environ.get(name,str(default))
+    try:value=int(raw)
+    except (TypeError,ValueError):raise ValueError(name+" must be an integer.")
+    if not minimum<=value<=maximum:raise ValueError(name+" is outside the supported range.")
+    return value
+
 def request_model(model,messages,tools):
-    payload=json.dumps({"model":model,"messages":messages,"tools":tools,"stream":False,
-      "options":{"temperature":0}}).encode()
+    configuration={"model":model,"messages":messages,"tools":tools,"stream":False,
+      "options":{"temperature":0,
+        "num_ctx":bounded_setting("LAW_AGENT_CONTEXT",8192,2048,32768),
+        "num_predict":bounded_setting("LAW_AGENT_TOKENS",768,128,2048)}}
+    thinking=os.environ.get("LAW_AGENT_THINK")
+    if thinking is not None:
+        if thinking.lower() not in {"true","false"}:raise ValueError("LAW_AGENT_THINK must be true or false.")
+        configuration["think"]=thinking.lower()=="true"
+    payload=json.dumps(configuration).encode()
     # Fixed loopback endpoint; model credentials and arbitrary URLs never come from the browser.
     req=urllib.request.Request("http://127.0.0.1:11434/api/chat",data=payload,
       headers={"Content-Type":"application/json"})
     # Avoid sending a local corpus through an ambient HTTP proxy.
     opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open(req,timeout=120) as response:
+    with opener.open(req,timeout=bounded_setting('LAW_AGENT_TIMEOUT',120,10,300)) as response:
         raw=response.read(4*1024*1024+1)
     if len(raw)>4*1024*1024: raise ValueError("Model response exceeded limit.")
     return json.loads(raw)["message"]
@@ -55,7 +69,13 @@ def run_agent(db,prompt,model=None,client=request_model):
       {"role":"user","content":prompt}]
     trace=[]
     # Coverage is mandatory, independent of whether the model asks for it.
-    coverage=stats(db)
+    raw_coverage=stats(db)
+    # Keep mandatory scope context small enough that the question is retained.
+    coverage={key:raw_coverage[key] for key in
+      ("source_records","jurisdictions","coverage_note","consolidation_policy","transcription_status")}
+    coverage["extractor_version"]=raw_coverage.get("extractor_version","not recorded")
+    coverage["release_points"]=sorted({row["id"].split(":",1)[0] for row in raw_coverage["imports"]})
+    coverage["effective_date_policy"]="Individual effective dates are not verified; archive, publication, import and release dates are not effective dates."
     messages.append({"role":"user","content":"Repository coverage metadata: "+json.dumps(coverage)})
     trace.append({"tool":"coverage","arguments":{},"result":coverage})
     calls_used=0
@@ -76,7 +96,8 @@ def run_agent(db,prompt,model=None,client=request_model):
             value=execute(db,name,args)
             # Tool evidence is capped and marked if truncated; references remain in trace.
             encoded=json.dumps(value,ensure_ascii=False)
-            if len(encoded)>60000: value={"truncated":True,"evidence":encoded[:60000],"note":"Open the source in the repository to read the full text."}
+            evidence_limit=bounded_setting("LAW_AGENT_EVIDENCE_LIMIT",12000,1000,60000)
+            if len(encoded)>evidence_limit: value={"truncated":True,"evidence":encoded[:evidence_limit],"note":"Only a prefix is visible. Do not infer absence or describe the complete provision. Open the full source in the repository."}
             trace.append({"tool":name,"arguments":args,"result":value})
             messages.append({"role":"tool","tool_name":name,"content":json.dumps(value,ensure_ascii=False)})
             calls_used+=1
