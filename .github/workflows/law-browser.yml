@@ -22,10 +22,10 @@ jobs:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
         with:
-          name: official-law-corpus-119-136
+          name: official-law-corpus-119-136-text-v2
           path: law-corpus
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 42063808408
+          run-id: 42238441182
       - run: npm ci
       - run: npm install --no-save --package-lock=false @playwright/test
       - run: npx playwright install --with-deps chromium
