@@ -56,8 +56,9 @@ try {
   await page.getByRole('heading', { name: 'Draft version 2 · not enacted', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Start another amendment', exact: true }).click();
   const sourceBox = page.getByLabel('Original statutory body — select the words to amend', { exact: true });
-  await sourceBox.focus();
-  await sourceBox.press('Control+Home');
+  await sourceBox.click({ position: { x: 12, y: 12 } });
+  assert.equal(await sourceBox.inputValue(), before.body, 'Selection box must contain the pinned source text');
+  await sourceBox.press('Home');
   await sourceBox.press('Shift+ArrowRight');
   assert.ok(await sourceBox.evaluate(element => element.selectionEnd > element.selectionStart), 'Keyboard selection must be nonempty');
   await page.getByRole('button', { name: 'Use selected wording', exact: true }).click();
