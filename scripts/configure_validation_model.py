@@ -17,9 +17,10 @@ def configure(base,model,output):
     template=source["template"]
     patched,count=re.subn(r"\{\{\s*\.Function\s*\}\}","{{ json .Function }}",template)
     if count!=1:raise ValueError("Expected one legacy tool-schema template expression; inspect this model before patching.")
-    generation='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant'
-    if patched.count(generation)!=1:raise ValueError("Expected the reviewed Qwen3 assistant-generation template marker.")
-    patched=patched.replace(generation,generation+'\n{{ if and $.IsThinkSet (not $.Think) }}<think>\n\n</think>\n\n{{ end }}')
+    generation='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant\n<think>\n'
+    if patched.count(generation)!=1:raise ValueError("Expected the reviewed Qwen3 unconditional thinking prefix.")
+    replacement='{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant\n{{ if and $.IsThinkSet (not $.Think) }}<think>\n\n</think>\n\n{{ else }}<think>\n{{ end }}'
+    patched=patched.replace(generation,replacement)
     metadata={"base_model":base,"derived_model":model,
       "base_template_sha256":hashlib.sha256(template.encode()).hexdigest(),
       "derived_template_sha256":hashlib.sha256(patched.encode()).hexdigest(),

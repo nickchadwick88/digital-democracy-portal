@@ -1,6 +1,7 @@
 """Bounded local-model research agent. No shell, arbitrary network, source edits or enactment."""
 import json
 import os
+import re
 import urllib.request
 import uuid
 from law_repository import search,get_source,compare,consolidated,stats,now
