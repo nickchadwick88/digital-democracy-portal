@@ -132,3 +132,10 @@ The non-thinking validation alias uses an unconditional empty thinking block and
 ### Validation disposition (November 6, 2026)
 
 The baseline and three derived-template probes did not satisfy live-AI acceptance. The tested Qwen3/Ollama stack remains unapproved; it was not activated as a persistent service. See LIVE_AI_VALIDATION.md for the public reproducibility summary. Passing ordinary code tests does not change that disposition. Heavy live runs are now manually dispatched; normal code checks remain automatic.
+
+
+### Evidence-first research (AI explanations disabled)
+
+`POST /api/laws/research` accepts `query` (explicit keywords or exact `1 U.S.C. § 7` style citation) and/or up to four `source_ids`. The application retrieves canonical original text before any interpretation. Responses contain at most four 1,800-codepoint excerpts, source IDs, edition/jurisdiction, original body hashes, official URLs and original codepoint offsets. Exact citations retain multiple stored editions; incomplete candidate sets and collection gaps are explicit. Search has AND semantics for up to sixteen terms; this is not natural-language legal applicability analysis.
+
+The portal's evidence form works offline with the local corpus and makes no model calls. AI explanations remain disabled. `law_research.validate_explanation` provides a separately tested foundation for future integration: unknown source IDs, unsupported U.S. Code citations and altered quotations are rejected; every claim reference needs an exact quote from the retrieved excerpt. These checks do not prove paraphrase entailment or legal correctness. No model integration or live-model acceptance is claimed. The older `/agent` endpoint remains an experimental diagnostic and does not receive these new guarantees.

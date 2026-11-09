@@ -10,7 +10,7 @@ type Source = { id: string; citation: string; heading: string; jurisdiction: str
 type Stats = { extractor_version?: string; source_records: number; unique_nonempty_texts: number; nonempty_records: number; pending_corrections: number; coverage_note: string; transcription_status: string; agent_configured: boolean; titles: { title_number: string; count: number }[]; jurisdictions: { jurisdiction: string; count: number }[] };
 type Group = { hash: string; excerpt: string; occurrences: number; references: Source[] };
 type Comparison = { first: Source; second: Source; identical_text: boolean; legal_equivalence: string; diff: string };
-type Agent = { answer: string; status: string; trace: { tool: string; arguments: Record<string, string> }[] };
+type Evidence = { status: string; sources: (Source & { excerpt: string; start: number; end: number; complete_body: boolean })[]; limitations: string[] };
 const states = 'AK AL AR AZ CA CO CT DE FL GA HI IA ID IL IN KS KY LA MA MD ME MI MN MO MS MT NC ND NE NH NJ NM NV NY OH OK OR PA RI SC SD TN TX UT VA VT WA WI WV WY'.split(' ');
 async function api<T>(path: string, data?: unknown): Promise<T> {
   const response = await fetch('/api/laws/' + path, data === undefined ? undefined : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -26,7 +26,7 @@ export default function LawExplorer() {
   const [source, setSource] = useState<Source | null>(null), [groups, setGroups] = useState<Group[]>([]);
   const [first, setFirst] = useState(''), [second, setSecond] = useState(''), [comparison, setComparison] = useState<Comparison | null>(null);
   const [correction, setCorrection] = useState(''), [reason, setReason] = useState(''), [message, setMessage] = useState('');
-  const [prompt, setPrompt] = useState(''), [agent, setAgent] = useState<Agent | null>(null), [selectedState, setSelectedState] = useState('CO');
+  const [evidenceQuery, setEvidenceQuery] = useState(''), [useOpenSource, setUseOpenSource] = useState(false), [evidence, setEvidence] = useState<Evidence | null>(null), [selectedState, setSelectedState] = useState('CO');
   async function task(action: () => Promise<void>) {
     setBusy(true); setError(''); setMessage('');
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'The request failed.'); } finally { setBusy(false); }
@@ -83,9 +83,23 @@ export default function LawExplorer() {
       {stats && <><h3>Imported source records by U.S. Code title</h3><div className="title-bars">{stats.titles.map(title => <div key={title.title_number}><span>Title {title.title_number}</span><meter min={0} max={max} value={title.count} aria-label={'Title ' + title.title_number + ' source records'} /><strong>{title.count.toLocaleString()}</strong></div>)}</div></>}
       <p className="muted">The map shows collection coverage. Jurisdiction-by-jurisdiction differences will appear after adoption and applicability records are collected; text matches alone do not establish them.</p>
     </section>
-    <section className="section-card"><h2>AI research assistant</h2><p>{stats?.agent_configured ? 'A local model is configured. Answers are research drafts with tool traces.' : 'AI is not connected. Configure a local Ollama model with tool support to use this assistant.'}</p><p>The assistant can search, open sources, compare wording, and inspect consolidation and coverage. It cannot rewrite source laws or enact changes.</p>
-      <form onSubmit={e => { e.preventDefault(); task(async () => setAgent(await api<Agent>('agent', { prompt }))); }}><label htmlFor="law-ai">Research question</label><textarea id="law-ai" value={prompt} maxLength={4000} onChange={e => setPrompt(e.target.value)} required /><button disabled={busy || !stats?.agent_configured}>Research with AI</button></form>
-      {agent && <><p><strong>{agent.status}</strong></p><div className="agent-answer">{agent.answer}</div><details><summary>Research tool trace</summary>{agent.trace.map((step, index) => <p key={index}>{step.tool}: {JSON.stringify(step.arguments)}</p>)}</details></>}
+    <section className="section-card"><h2>Evidence-first research</h2>
+      <p>Find original passages without an AI connection. AI explanations remain disabled pending successful live validation.</p>
+      <form onSubmit={e => { e.preventDefault(); task(async () => setEvidence(await api<Evidence>('research', { query: evidenceQuery, source_ids: useOpenSource && source ? [source.id] : [] }))); }}>
+        <label htmlFor="law-evidence">Evidence search words or exact U.S. Code citation</label>
+        <input id="law-evidence" value={evidenceQuery} maxLength={500} onChange={e => setEvidenceQuery(e.target.value)} placeholder="safe exit or 1 U.S.C. § 7" required={!useOpenSource || !source} />
+        <label><input type="checkbox" checked={useOpenSource} disabled={!source} onChange={e => setUseOpenSource(e.target.checked)} /> Use the currently open original source{source ? ': ' + source.citation : ''}</label>
+        <button disabled={busy}>Find evidence</button>
+      </form>
+      {evidence && <><p role="status"><strong>{evidence.status}</strong></p>{!evidence.sources.length && <p>No matching evidence collected. This does not establish that no applicable law exists.</p>}
+        {evidence.sources.map(item => <article key={item.id}><h3>{item.citation} · {item.heading}</h3><p>{item.jurisdiction} · Edition {item.release}</p>
+          <pre className="statute-text">{item.excerpt || '[Empty extracted body]'}</pre>
+          <p>Original codepoint range [{item.start}, {item.end}). {item.complete_body ? 'Complete extracted body.' : 'Excerpt; open the source for surrounding provisions.'}</p>
+          <details><summary>Source provenance</summary><p>Source ID: {item.id}</p><p>Canonical text SHA-256: {item.text_hash}</p><a href={item.source_url} target="_blank" rel="noreferrer">Official source</a></details>
+          <button disabled={busy} onClick={() => task(() => open(item.id))}>Open complete original source</button>
+        </article>)}
+        <ul>{evidence.limitations.map(note => <li key={note}>{note}</li>)}</ul>
+      </>}
     </section>
     {busy && <p role="status">Working…</p>}{error && <p role="alert" className="error-message">{error}</p>}<p role="status">{message}</p>
   </Layout>;

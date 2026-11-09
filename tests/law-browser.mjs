@@ -17,7 +17,10 @@ try {
   await page.getByText('60,463', { exact: false }).first().waitFor();
   await page.locator('.law-map path[role=button]').first().waitFor();
   assert.ok(await page.locator('.law-map path[role=button]').count() >= 48);
-  assert.equal(await page.getByRole('button', { name: 'Research with AI', exact: true }).isDisabled(), true);
+  await page.getByLabel('Evidence search words or exact U.S. Code citation', { exact: true }).fill('1 U.S.C. § 7');
+  await page.getByRole('button', { name: 'Find evidence', exact: true }).click();
+  await page.getByText('Original evidence; no AI interpretation generated', { exact: true }).waitFor();
+  assert.ok(await page.getByRole('button', { name: 'Open complete original source', exact: true }).count() >= 1);
   await page.getByLabel('Words or citation', { exact: true }).fill('corporations');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.locator('.law-results article').first().waitFor();

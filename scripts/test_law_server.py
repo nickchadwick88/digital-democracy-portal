@@ -52,4 +52,18 @@ class ServerTest(unittest.TestCase):
     def test_uncollected_boundary_and_unknown_endpoint(self):
         self.assertEqual(self.request("GET","/api/laws/boundaries")[0],404)
         self.assertEqual(self.request("GET","/api/laws/not-an-endpoint")[0],404)
+
+    def test_research_is_offline_and_same_origin(self):
+        value={"query":"safe","source_ids":["fixture"]}
+        status,_=self.request("POST","/api/laws/research",value)
+        self.assertEqual(status,403)
+        status,raw=self.request("POST","/api/laws/research",value,origin="http://"+self.host)
+        self.assertEqual(status,200)
+        result=json.loads(raw)
+        self.assertFalse(result["model_attempted"])
+        self.assertEqual(result["sources"][0]["id"],"fixture")
+        self.assertEqual(result["sources"][0]["excerpt"],"A building must have a safe exit.")
+        status,_=self.request("POST","/api/laws/research",{"source_ids":["missing"]},origin="http://"+self.host)
+        self.assertEqual(status,400)
+
 if __name__=="__main__":unittest.main()

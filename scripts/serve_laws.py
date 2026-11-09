@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from law_repository import connect,search,get_source,compare,consolidated,stats,propose_correction
 from law_agent import run_agent
+from law_research import research
 from law_workflow import corrections,transcription,review_correction,amendment,list_amendments,create_amendment,revise_amendment
 
 class Handler(SimpleHTTPRequestHandler):
@@ -37,7 +38,7 @@ class Handler(SimpleHTTPRequestHandler):
                         if not boundary.is_file(): return self.respond(404,{"error":"Geographic boundaries have not been collected yet."})
                         result=json.loads(boundary.read_text())
                     elif parsed.path=="/api/laws/stats":
-                        result=dict(stats(db),agent_configured=bool(os.environ.get("LAW_AGENT_MODEL")))
+                        result=dict(stats(db),agent_configured=bool(os.environ.get("LAW_AGENT_MODEL")),grounded_explanations_enabled=False)
                     elif parsed.path=="/api/laws/search": result=search(db,get("q"),jurisdiction=get("jurisdiction") or None)
                     elif parsed.path=="/api/laws/source-checks":
                         audit_path=self.database.parent/"source-audit.json"
@@ -86,6 +87,7 @@ class Handler(SimpleHTTPRequestHandler):
                     result=create_amendment(db,**value)
                 elif self.path=="/api/laws/amendments/revise":
                     result=revise_amendment(db,**value)
+                elif self.path=="/api/laws/research": result=research(db,**value)
                 elif self.path=="/api/laws/agent": result=run_agent(db,value["prompt"])
                 else: return self.respond(404,{"error":"Unknown endpoint."})
             return self.respond(200,result)
