@@ -1,29 +1,5 @@
 import { Link } from "react-router-dom";
-
+import Layout from "../components/Layout";
 export default function AuthPage() {
-  return (
-    <div style={{padding:"40px"}}>
-      <h1>Create Your Secure Civic Identity</h1>
-
-      <p>
-        Prepare to participate in the future of collective decision-making.
-      </p>
-
-      <div style={{marginTop:"20px"}}>
-        <input placeholder="Full Name" />
-      </div>
-
-      <div style={{marginTop:"10px"}}>
-        <input placeholder="Email" />
-      </div>
-
-      <div style={{marginTop:"10px"}}>
-        <input placeholder="Password" type="password" />
-      </div>
-
-      <div style={{marginTop:"20px"}}>
-        <Link to="/dashboard">Create Account</Link>
-      </div>
-    </div>
-  );
+  return <Layout title="Explore participation" subtitle="Prepare to participate in the future of collective decision-making."><section className="section-card"><h2>Try the local demonstration</h2><p>Account creation and identity verification are not connected yet. No name, email, or password is needed. Your demo votes and suggestions stay in this browser.</p><Link className="primary-link" to="/dashboard">Enter demo dashboard</Link></section></Layout>;
 }

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import CivicGraphic from "../components/CivicGraphic";
 
 export default function LandingPage() {
   return (
@@ -13,11 +14,11 @@ export default function LandingPage() {
         </div>
 
         <div className="lp-top-actions">
-          <Link to="/auth" className="lp-text-link">
-            Log In
+          <Link to="/dashboard" className="lp-text-link">
+            Open Dashboard
           </Link>
           <Link to="/auth" className="lp-pill-button">
-            Create Account
+            Explore the Demo
           </Link>
         </div>
       </header>
@@ -38,10 +39,10 @@ export default function LandingPage() {
 
             <div className="lp-hero-actions">
               <Link to="/auth" className="lp-primary-button">
-                Create Account
+                Explore the Demo
               </Link>
               <Link to="/auth" className="lp-secondary-button">
-                Log In
+                Open Dashboard
               </Link>
             </div>
           </div>
@@ -51,15 +52,15 @@ export default function LandingPage() {
             <div className="lp-line lp-line-2" />
 
             <div className="lp-circle lp-circle-main">
-              <div className="lp-circle-image lp-image-governance" />
+              <CivicGraphic />
             </div>
 
             <div className="lp-circle lp-circle-top">
-              <div className="lp-circle-image lp-image-trust" />
+              <CivicGraphic variant="trust" />
             </div>
 
             <div className="lp-circle lp-circle-bottom">
-              <div className="lp-circle-image lp-image-economy" />
+              <CivicGraphic variant="growth" />
             </div>
 
             <div className="lp-number lp-number-1">01</div>
@@ -76,18 +77,18 @@ export default function LandingPage() {
                 discussion, and voting.
               </p>
             </div>
-            <div className="lp-portal-visual lp-voting-visual" />
+            <div className="lp-portal-visual"><CivicGraphic /></div>
           </Link>
 
           <Link to="/payment" className="lp-portal-card">
             <div className="lp-portal-copy">
-              <h2>Economic Portal</h2>
+              <h2>Your Income Portal</h2>
               <p>
                 Understand participation, contributions, and the shared
                 economic system with greater transparency.
               </p>
             </div>
-            <div className="lp-portal-visual lp-economy-visual" />
+            <div className="lp-portal-visual"><CivicGraphic variant="growth" /></div>
           </Link>
         </section>
 
@@ -100,29 +101,30 @@ export default function LandingPage() {
         </section>
 
         <section className="lp-info-grid">
-          <div className="lp-info-card">
+          <Link to="/access" className="lp-info-card">
             <h3>Learn to Participate</h3>
             <p>
               Understand how proposals, review, voting, and participation work.
             </p>
-          </div>
+          </Link>
 
-          <div className="lp-info-card">
+          <Link to="/about" className="lp-info-card">
             <h3>About the Project</h3>
             <p>
               Explore the mission, philosophy, and long-term vision behind the
               platform.
             </p>
-          </div>
+          </Link>
 
-          <div className="lp-info-card">
+          <Link to="/access" className="lp-info-card">
             <h3>Public Access</h3>
             <p>
               Find civic centers, kiosks, and support pathways for in-person
               participation.
             </p>
-          </div>
+          </Link>
         </section>
+        <footer className="portal-footer"><span>Interactive review edition · Your demo data stays in your browser.</span><Link className="action-link" to="/settings">Settings and backups</Link></footer>
       </main>
     </div>
   );

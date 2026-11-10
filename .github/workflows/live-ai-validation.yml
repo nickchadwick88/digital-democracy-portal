@@ -1,0 +1,80 @@
+name: Live AI validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      LAW_AGENT_BASE_MODEL: qwen3:4b
+      LAW_AGENT_MODEL: dd-qwen3-4b-tools
+      LAW_AGENT_THINK: 'false'
+      LAW_AGENT_QWEN_NO_THINK: 'true'
+      LAW_AGENT_CONTEXT: '8192'
+      LAW_AGENT_TOKENS: '640'
+      LAW_AGENT_TIMEOUT: '90'
+      LAW_AGENT_EVIDENCE_LIMIT: '12000'
+      OLLAMA_HOST: 127.0.0.1:11434
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_MAX_LOADED_MODELS: '1'
+      OLLAMA_VERSION: v0.40.15
+      OLLAMA_ARCHIVE_SHA256: 628c018404a4206493efd38e46251c154ede5141b8b8dc85c659b3b027c47379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check provider completion guards before downloading the model
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - uses: actions/download-artifact@v4
+        with:
+          name: official-law-corpus-119-136-text-v2
+          path: law-corpus
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 42238441182
+      - name: Install pinned Ollama runtime from its official release
+        run: |
+          archive="$RUNNER_TEMP/ollama-runtime.tar.zst"
+          destination="$RUNNER_TEMP/ollama-runtime"
+          curl --fail --location --retry 3 "https://github.com/ollama/ollama/releases/download/$OLLAMA_VERSION/ollama-linux-amd64.tar.zst" --output "$archive"
+          printf '%s  %s\n' "$OLLAMA_ARCHIVE_SHA256" "$archive" | sha256sum --check -
+          mkdir -p "$destination"
+          tar --zstd -xf "$archive" -C "$destination" --exclude='lib/ollama/cuda*' --exclude='lib/ollama/rocm*' --exclude='lib/ollama/vulkan*'
+          rm "$archive"
+          echo "$destination/bin" >> "$GITHUB_PATH"
+          echo "OLLAMA_MODELS=$RUNNER_TEMP/ollama-models" >> "$GITHUB_ENV"
+      - name: Start isolated loopback model service
+        run: |
+          mkdir -p live-validation
+          nohup ollama serve > live-validation/ollama-service.log 2>&1 &
+          python3 - <<'PY'
+          import json,time,urllib.request
+          opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+          for attempt in range(60):
+              try:
+                  with opener.open('http://127.0.0.1:11434/api/version',timeout=2) as response:
+                      print(json.load(response))
+                      break
+              except Exception:
+                  if attempt==59:raise
+                  time.sleep(.5)
+          PY
+      - name: Load actual tool-capable model
+        run: ollama pull "$LAW_AGENT_BASE_MODEL"
+      - name: Configure and probe reviewed tool and non-thinking template
+        run: python3 scripts/configure_validation_model.py --base "$LAW_AGENT_BASE_MODEL" --model "$LAW_AGENT_MODEL" --output live-validation
+      - name: Validate live model through application tools and HTTP endpoint
+        run: python3 scripts/validate_live_agent.py --corpus law-corpus --output live-validation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-ai-validation-qwen3-4b
+          path: |
+            live-validation/*.json
+            live-validation/*.md
+            live-validation/*.log
+          retention-days: 90
+          if-no-files-found: error

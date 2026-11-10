@@ -1,0 +1,47 @@
+name: Rebuild and verify source text v2
+on:
+  push:
+    branches: [feat/recover-voting-prototype]
+    paths: ['scripts/collect_uscode.py', 'scripts/audit_source_text.py', 'scripts/compare_extractions.py', '.github/workflows/rebuild-law-text.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: official-law-corpus-119-136
+          path: original-corpus
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 42063808408
+      - name: Rebuild into a new extraction snapshot
+        run: python3 scripts/collect_uscode.py --output law-corpus-v2 --source-cache original-corpus/originals --titles {1..52} 54 05a 11a 18a --export
+      - run: cp original-corpus/us-states.json law-corpus-v2/us-states.json
+      - run: python3 scripts/verify_corpus.py --corpus law-corpus-v2
+      - run: python3 scripts/audit_source_text.py --corpus law-corpus-v2
+      - run: python3 scripts/compare_extractions.py --old original-corpus --new law-corpus-v2
+      - name: Require complete source-text consistency
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('law-corpus-v2/source-audit.json').read_text())
+          assert report['source_records_checked']==60463
+          assert report['flagged_records']==0
+          assert not report['archive_failures']
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-law-corpus-119-136-text-v2
+          path: law-corpus-v2/
+          retention-days: 90
+          if-no-files-found: error
