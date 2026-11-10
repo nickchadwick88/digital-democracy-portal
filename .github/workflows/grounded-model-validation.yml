@@ -1,10 +1,6 @@
 name: Grounded model validation
 on:
   workflow_dispatch:
-  push:
-    branches: [feat/recover-voting-prototype]
-    paths:
-      - .github/workflows/grounded-model-validation.yml
 permissions:
   contents: read
   actions: read
