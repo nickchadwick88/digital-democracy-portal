@@ -94,6 +94,7 @@ class ResearchTest(unittest.TestCase):
         result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"], allow_explanation=True, client=client)
         self.assertEqual(result["mode"], "reference_checked_draft")
         self.assertTrue(result["model_attempted"])
+        self.assertTrue(result["requires_semantic_review"])
 
     def test_bad_output_and_timeout_fall_back_without_delivering_claims(self):
         for message in ({"content": "not JSON"}, {"content": json.dumps(self.candidate(source_id="invented"))},
@@ -107,6 +108,7 @@ class ResearchTest(unittest.TestCase):
             raise TimeoutError("private provider detail")
         result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"], allow_explanation=True, client=timeout)
         self.assertEqual(result["validation_error"], "TimeoutError")
+        self.assertEqual(result["validation_stage"], "provider_completion")
         self.assertNotIn("private provider detail", json.dumps(result))
 
 if __name__ == "__main__":

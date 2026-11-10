@@ -193,16 +193,19 @@ def explain_evidence(db, *, prompt, model, query="", source_ids=None,
         "Do not claim to perform any such action. Schema: " + json.dumps(EXPLANATION_SCHEMA))},
         {"role": "user", "content": json.dumps({"question": prompt, "evidence": result["sources"],
             "coverage": result["coverage"], "limitations": result["limitations"]}, ensure_ascii=False)}]
+    stage = "provider_completion"
     try:
         message = client(model, messages, [], response_format=EXPLANATION_SCHEMA)
         if not isinstance(message, dict) or message.get("tool_calls"):
             raise ValueError("Expected a completed structured explanation without tool calls.")
+        stage = "json_and_reference_validation"
         checked = validate_explanation(message.get("content"), result["sources"])
         result.update(checked)
         result["limitations"] = list(dict.fromkeys(result["limitations"] + checked["limitations"]))
-        result.update(mode="reference_checked_draft", status="Experimental draft: references checked; interpretation unverified")
+        result.update(mode="reference_checked_draft", status="Experimental draft: references checked; interpretation unverified",
+                      requires_semantic_review=True)
     except Exception as error:
         # Failed content is never presented as an answer. Keep only a bounded error label.
         result.update(status="AI explanation withheld; original evidence remains available",
-                      validation_error=type(error).__name__, claims=[])
+                      validation_error=type(error).__name__, validation_stage=stage, claims=[])
     return result

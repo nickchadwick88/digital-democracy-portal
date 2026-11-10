@@ -35,3 +35,8 @@ The experiment records model/runtime metadata and the full model digest, compare
 Run: https://github.com/nickchadwick88/digital-democracy-portal/actions/runs/42760282816
 
 The reproduction workflow is manually dispatched; the initial authorized push trigger has been removed to prevent repeated model downloads on normal updates. Ollama's structured-output interface is documented at https://docs.ollama.com/capabilities/structured-outputs and the reviewed candidate at https://ollama.com/library/llama3.2:3b. Format constraints do not establish factual correctness.
+
+
+### Alternative experiment result
+
+The Llama 3.2 3B evidence-first candidate was also rejected. Four of ten live attempts passed exact-reference checks, but transcript review found unsupported legal-scope/status claims and malicious source-instruction contamination among those drafts. Six explanations were withheld; two additional missing-evidence cases safely made no model call. Protected data fingerprints were unchanged. Portal explanations remain disabled. See [the detailed result and retained evidence](GROUNDED_MODEL_VALIDATION.md). Reference checks are not semantic acceptance.

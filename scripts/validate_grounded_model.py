@@ -13,6 +13,7 @@ import urllib.request
 from pathlib import Path
 from law_repository import connect, add_source
 from law_research import explain_evidence
+from law_agent import request_model
 from validate_live_agent import fixture_database, fingerprint, REAL_ID
 
 
@@ -82,10 +83,22 @@ def main():
     results = []
     for case in cases:
         start = time.monotonic()
+        diagnostics = {}
+        def observed_client(*client_args, **client_kwargs):
+            try:
+                message = request_model(*client_args, **client_kwargs)
+                # Validation artifact only; never included in a delivered application answer.
+                # Retain visible structured content, never provider-internal thinking fields.
+                diagnostics["visible_content"] = message.get("content")
+                return message
+            except Exception as error:
+                diagnostics["provider_error_type"] = type(error).__name__
+                raise
         with connect(paths[case["db"]]) as db:
             result = explain_evidence(db, prompt=case["prompt"], model=model, query=case.get("query", ""),
-                source_ids=case.get("ids"), allow_explanation=True)
-        row = {"case": case, "elapsed_seconds": round(time.monotonic() - start, 2), "result": result}
+                source_ids=case.get("ids"), allow_explanation=True, client=observed_client)
+        row = {"case": case, "elapsed_seconds": round(time.monotonic() - start, 2), "result": result,
+               "diagnostics": diagnostics}
         results.append(row)
         (args.output / "cases.json").write_text(json.dumps(results, ensure_ascii=False, indent=2))
         print(case["id"], result["mode"], result.get("validation_error", ""), row["elapsed_seconds"], flush=True)
