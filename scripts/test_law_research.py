@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from law_repository import connect, add_source
-from law_research import research, validate_explanation
+from law_research import research, validate_explanation, explain_evidence
 
 
 class ResearchTest(unittest.TestCase):
@@ -76,6 +76,38 @@ class ResearchTest(unittest.TestCase):
             with self.subTest(raw=raw[:50]), self.assertRaises(ValueError):
                 validate_explanation(raw, sources)
 
+
+    def test_model_gate_and_empty_evidence_never_call_client(self):
+        def forbidden(*args, **kwargs):
+            self.fail("Model must not be called")
+        result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"], client=forbidden)
+        self.assertFalse(result["model_attempted"])
+        result = explain_evidence(self.db, prompt="Explain", model="fixture", query="notcollected", allow_explanation=True, client=forbidden)
+        self.assertFalse(result["model_attempted"])
+
+    def test_structured_client_receives_already_retrieved_evidence(self):
+        def client(model, messages, tools, *, response_format):
+            self.assertEqual(tools, [])
+            self.assertIn("claims", response_format["properties"])
+            self.assertEqual(json.loads(messages[1]["content"])["evidence"][0]["id"], "s0")
+            return {"content": json.dumps(self.candidate())}
+        result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"], allow_explanation=True, client=client)
+        self.assertEqual(result["mode"], "reference_checked_draft")
+        self.assertTrue(result["model_attempted"])
+
+    def test_bad_output_and_timeout_fall_back_without_delivering_claims(self):
+        for message in ({"content": "not JSON"}, {"content": json.dumps(self.candidate(source_id="invented"))},
+                        {"content": json.dumps(self.candidate("altered quote"))}, {"tool_calls": [{}]}):
+            result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"],
+                allow_explanation=True, client=lambda *args, **kwargs: message)
+            self.assertEqual(result["mode"], "evidence_only")
+            self.assertEqual(result["claims"], [])
+            self.assertEqual(len(result["sources"]), 1)
+        def timeout(*args, **kwargs):
+            raise TimeoutError("private provider detail")
+        result = explain_evidence(self.db, prompt="Explain", model="fixture", source_ids=["s0"], allow_explanation=True, client=timeout)
+        self.assertEqual(result["validation_error"], "TimeoutError")
+        self.assertNotIn("private provider detail", json.dumps(result))
 
 if __name__ == "__main__":
     unittest.main()

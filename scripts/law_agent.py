@@ -35,11 +35,15 @@ def bounded_setting(name,default,minimum,maximum):
     if not minimum<=value<=maximum:raise ValueError(name+" is outside the supported range.")
     return value
 
-def request_model(model,messages,tools):
+def request_model(model,messages,tools,*,response_format=None):
     configuration={"model":model,"messages":messages,"tools":tools,"stream":False,
       "options":{"temperature":0,
         "num_ctx":bounded_setting("LAW_AGENT_CONTEXT",8192,2048,32768),
         "num_predict":bounded_setting("LAW_AGENT_TOKENS",768,128,2048)}}
+    if response_format is not None:
+        if tools: raise ValueError("Structured explanations do not use model tools.")
+        configuration.pop("tools",None)
+        configuration["format"]=response_format
     thinking=os.environ.get("LAW_AGENT_THINK")
     if thinking is not None:
         if thinking.lower() not in {"true","false"}:raise ValueError("LAW_AGENT_THINK must be true or false.")
@@ -111,3 +115,4 @@ def run_agent(db,prompt,model=None,client=request_model):
             messages.append({"role":"tool","tool_name":name,"content":json.dumps(value,ensure_ascii=False)})
             calls_used+=1
     raise ValueError("Agent step budget reached. Narrow the question.")
+
